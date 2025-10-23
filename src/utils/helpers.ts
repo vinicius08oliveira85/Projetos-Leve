@@ -1,4 +1,4 @@
-import { Blob } from '@google/genai';
+import { Blob } from 'https://aistudiocdn.com/@google/genai@^1.25.0';
 
 export function encode(bytes: Uint8Array) {
   let binary = '';
