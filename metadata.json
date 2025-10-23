@@ -1,0 +1,7 @@
+{
+  "name": "Gestão de Pacientes Internados",
+  "description": "An empty app",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
