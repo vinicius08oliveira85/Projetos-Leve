@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Patient, User, GuiaStatus, HistoryEntry } from '../types';
-import AppHeader from '../components/AppHeader';
-import { formatDateDdMmYy, calculatePermanencia } from '../utils/helpers';
-import GestaoDeLeito from '../components/GestaoDeLeito';
+import { Patient, User, GuiaStatus, HistoryEntry } from '../types/index.ts';
+import AppHeader from '../components/AppHeader.tsx';
+import { formatDateDdMmYy, calculatePermanencia } from '../utils/helpers.ts';
+import GestaoDeLeito from '../components/GestaoDeLeito.tsx';
 
 const statusToClassName = (status: GuiaStatus) => {
     return status

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Patient, User, Esperas, HistoryEntry, LeitoType } from '../types';
+import { Patient, User, Esperas, HistoryEntry, LeitoType } from '../types/index.ts';
 import { GoogleGenAI, LiveServerMessage, Blob, Modality } from '@google/genai';
-import { createBlob, formatDateDdMmYy } from '../utils/helpers';
-import AppHeader from '../components/AppHeader';
-import GestaoDeLeito from '../components/GestaoDeLeito';
+import { createBlob, formatDateDdMmYy } from '../utils/helpers.ts';
+import AppHeader from '../components/AppHeader.tsx';
+import GestaoDeLeito from '../components/GestaoDeLeito.tsx';
 
 const leitoOptions: LeitoType[] = ['CTI', 'CTI PED', 'CTI NEO', 'USI', 'USI PED', 'UI', 'UI PSQ'];
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import AppHeader from '../components/AppHeader';
+import AppHeader from '../components/AppHeader.tsx';
 
 const PlaceholderPage = ({ title, subtitle, onBack }: { title: string, subtitle: string, onBack: () => void }) => (
     <div className="page-container">

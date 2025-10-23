@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import AppHeader from '../components/AppHeader';
+import AppHeader from '../components/AppHeader.tsx';
 
 const PainelIndicadoresInternacao = ({ onBack }: { onBack: () => void }) => {
     const [activeTab, setActiveTab] = useState('indicadores'); // 'indicadores', 'diaadia', 'porHospital'

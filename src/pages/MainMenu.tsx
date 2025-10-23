@@ -1,6 +1,6 @@
 import React from 'react';
-import { User, MenuItem } from '../types';
-import AppHeader from '../components/AppHeader';
+import { User, MenuItem } from '../types/index.ts';
+import AppHeader from '../components/AppHeader.tsx';
 
 const MainMenu = ({ onSelectPage, user, onLogout, menuItems }: { onSelectPage: (page: string) => void, user: User, onLogout: () => void, menuItems: MenuItem[] }) => {
     

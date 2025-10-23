@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Patient, User, Esperas } from '../types';
-import AppHeader from '../components/AppHeader';
-import { formatDateDdMmYy } from '../utils/helpers';
+import { Patient, User, Esperas } from '../types/index.ts';
+import AppHeader from '../components/AppHeader.tsx';
+import { formatDateDdMmYy } from '../utils/helpers.ts';
 
 const criticidadeDisplayMap: { [key in Patient['criticidade']]: string } = {
     'Diário 24h': '1',

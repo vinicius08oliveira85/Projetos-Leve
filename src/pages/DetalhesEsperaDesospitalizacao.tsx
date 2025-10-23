@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Patient, User, EsperaDesospitalizacaoDetalhes } from '../types';
-import AppHeader from '../components/AppHeader';
+import { Patient, User, EsperaDesospitalizacaoDetalhes } from '../types/index.ts';
+import AppHeader from '../components/AppHeader.tsx';
 
 const DetalhesEsperaDesospitalizacao = ({ patient, onBack, user, onUpdatePatient, showToast }: {
     patient: Patient,

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Patient, User, EsperaCirurgiaDetalhes } from '../types';
-import { calculateDaysBetween } from '../utils/helpers';
-import AppHeader from '../components/AppHeader';
+import { Patient, User, EsperaCirurgiaDetalhes } from '../types/index.ts';
+import { calculateDaysBetween } from '../utils/helpers.ts';
+import AppHeader from '../components/AppHeader.tsx';
 
 const DetalhesEsperaCirurgia = ({ patient, onBack, user, onUpdatePatient, showToast }: {
     patient: Patient,

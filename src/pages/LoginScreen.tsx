@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { User } from '../types';
-import LeveSaudeLogo from '../components/LeveSaudeLogo';
+import { User } from '../types/index.ts';
+import LeveSaudeLogo from '../components/LeveSaudeLogo.tsx';
 
 const LoginScreen = ({ onLogin }: { onLogin: (user: User) => void }) => {
     const [username, setUsername] = useState('usuario.admin');

@@ -1,7 +1,7 @@
 import React from 'react';
-import { Patient, User } from '../types';
-import { formatDateDdMmYy, calculateDaysWaiting } from '../utils/helpers';
-import AppHeader from '../components/AppHeader';
+import { Patient, User } from '../types/index.ts';
+import { formatDateDdMmYy, calculateDaysWaiting } from '../utils/helpers.ts';
+import AppHeader from '../components/AppHeader.tsx';
 
 const PacientesAguardandoDesospitalizacao = ({ onBack, onViewDetails, user, patients, onUpdatePatients, showToast }: {
     onBack: () => void,

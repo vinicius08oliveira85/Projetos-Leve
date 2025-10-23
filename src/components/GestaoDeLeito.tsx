@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { User, Patient, LeitoRecord, LeitoType } from '../types';
-import { formatDateDdMmYy } from '../utils/helpers';
+import { User, Patient, LeitoRecord, LeitoType } from '../types/index.ts';
+import { formatDateDdMmYy } from '../utils/helpers.ts';
 
 const leitoOptions: LeitoType[] = ['CTI', 'CTI PED', 'CTI NEO', 'USI', 'USI PED', 'UI', 'UI PSQ'];
 const leitoDoDiaOptions: (LeitoType | 'Alta')[] = [...leitoOptions, 'Alta'];

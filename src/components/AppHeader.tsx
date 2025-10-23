@@ -1,5 +1,5 @@
 import React from 'react';
-import LeveSaudeLogo from './LeveSaudeLogo';
+import LeveSaudeLogo from './LeveSaudeLogo.tsx';
 
 const AppHeader = ({ title, subtitle, onBack }: { title: string, subtitle: string, onBack?: () => void }) => {
     return (
