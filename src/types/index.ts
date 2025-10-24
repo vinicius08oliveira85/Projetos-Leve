@@ -20,6 +20,12 @@ export type Esperas = {
   desospitalizacao: boolean;
 };
 
+// Fix: Add Blob type definition for audio data to resolve an import error.
+export type Blob = {
+  data: string;
+  mimeType: string;
+};
+
 export type HistoryEntry = {
   data: string;
   responsavel: string;
@@ -97,7 +103,7 @@ export type Patient = {
   permanencia: string;
   relatorioMedico: string;
   criticidade: 'Diário 24h' | '48h' | '72h';
-  programa: 'Outros' | 'Oncologia' | 'Confirma Suporte';
+  programa: 'Outros' | 'Oncologia' | 'Confirma Suporte' | 'Home Care';
   altaPrev: string;
   altaReplan: string;
   altaFim: string;
@@ -127,5 +133,8 @@ export type Patient = {
   aguardandoDesospitalizacao?: string;
   desdeDesospitalizacao?: string;
   esperaDesospitalizacaoDetalhes?: EsperaDesospitalizacaoDetalhes;
-  taskStatus?: 'Revisada' | 'Pendente' | 'Em Andamento';
+  taskStatus?: 'Atrasado' | 'Auditados' | 'Em Fila';
+  rede?: string;
+  regiao?: string;
+  macroRegiao?: string;
 };

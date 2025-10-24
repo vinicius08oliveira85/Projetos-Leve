@@ -1,28 +1,38 @@
-import React from 'https://aistudiocdn.com/react@^19.2.0';
+import React, { useState } from 'https://aistudiocdn.com/react@^19.2.0';
 import { Patient, User } from '../types/index.ts';
 import { formatDateDdMmYy, calculateDaysWaiting } from '../utils/helpers.ts';
 import AppHeader from '../components/AppHeader.tsx';
 
-const PacientesAguardandoParecer = ({ onBack, onViewDetails, user, patients, onUpdatePatients, showToast }: {
+const PacientesAguardandoParecer = ({ onBack, onViewDetails, user, patients, onSavePatients, showToast }: {
     onBack: () => void,
     onViewDetails: (patient: Patient) => void,
     user: User,
     patients: Patient[],
-    onUpdatePatients: React.Dispatch<React.SetStateAction<Patient[]>>,
+    onSavePatients: (patients: Patient[], user: User) => void,
     showToast: (message: string) => void
 }) => {
     
+    const [editedPatients, setEditedPatients] = useState<Record<number, Partial<Patient>>>({});
     const parecerPatients = patients.filter(p => p.esperas.parecer);
 
     const handleFieldChange = (patientId: number, field: keyof Patient, value: any) => {
-        onUpdatePatients(currentPatients =>
-            currentPatients.map(p =>
-                p.id === patientId ? { ...p, [field]: value } : p
-            )
-        );
+        setEditedPatients(prev => ({
+            ...prev,
+            [patientId]: { ...prev[patientId], [field]: value }
+        }));
     };
 
     const handleSave = () => {
+        if (Object.keys(editedPatients).length === 0) {
+            showToast("Nenhuma alteração para salvar.");
+            return;
+        }
+        const updatedPatients = patients
+            .map(p => editedPatients[p.id] ? { ...p, ...editedPatients[p.id] } : p)
+            .filter(p => editedPatients[p.id]);
+
+        onSavePatients(updatedPatients, user);
+        setEditedPatients({});
         showToast("Alterações salvas com sucesso!");
     };
 
@@ -35,7 +45,7 @@ const PacientesAguardandoParecer = ({ onBack, onViewDetails, user, patients, onU
             />
             <div className="espera-filter-bar" style={{ justifyContent: 'flex-end', marginTop: '20px' }}>
                 <div className="filter-controls">
-                    <button className="save-button" onClick={handleSave}>Salvar</button>
+                    <button className="save-button" onClick={handleSave} disabled={Object.keys(editedPatients).length === 0}>Salvar</button>
                 </div>
             </div>
              <div className="table-container no-top-radius">
@@ -55,47 +65,51 @@ const PacientesAguardandoParecer = ({ onBack, onViewDetails, user, patients, onU
                         </tr>
                     </thead>
                     <tbody>
-                        {parecerPatients.map(p => (
-                            <tr key={p.id}>
-                                <td>{p.hospitalDestino}</td>
-                                <td>{p.cpf}</td>
-                                <td>{p.nome}</td>
-                                <td>{formatDateDdMmYy(p.dataIH)}</td>
-                                <td>{formatDateDdMmYy(p.altaPrev)}</td>
-                                <td>
-                                    {user.role === 'admin' ? (
-                                        <input
-                                            type="text"
-                                            className="table-input-text"
-                                            value={p.aguardandoParecer || ''}
-                                            placeholder="Ver tipos no sistema"
-                                            onChange={(e) => handleFieldChange(p.id, 'aguardandoParecer', e.target.value)}
-                                        />
-                                    ) : (
-                                        p.aguardandoParecer || 'N/A'
-                                    )}
-                                </td>
-                                <td>
-                                    {user.role === 'admin' ? (
-                                        <input
-                                            type="date"
-                                            className="table-input-date"
-                                            value={p.desdeParecer || ''}
-                                            onChange={(e) => handleFieldChange(p.id, 'desdeParecer', e.target.value)}
-                                        />
-                                    ) : (
-                                        formatDateDdMmYy(p.desdeParecer)
-                                    )}
-                                </td>
-                                <td>{calculateDaysWaiting(p.desdeParecer)}</td>
-                                <td>{p.leitoAuditado}</td>
-                                <td>
-                                    <button className="icon-button" onClick={() => onViewDetails(p)} aria-label={`Detalhes da Espera de Parecer de ${p.nome}`}>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
+                        {parecerPatients.map(p => {
+                            const editedData = editedPatients[p.id] || {};
+                            const patientData = { ...p, ...editedData };
+                            return (
+                                <tr key={p.id}>
+                                    <td>{patientData.hospitalDestino}</td>
+                                    <td>{patientData.cpf}</td>
+                                    <td>{patientData.nome}</td>
+                                    <td>{formatDateDdMmYy(patientData.dataIH)}</td>
+                                    <td>{formatDateDdMmYy(patientData.altaPrev)}</td>
+                                    <td>
+                                        {user.role === 'admin' ? (
+                                            <input
+                                                type="text"
+                                                className="table-input-text"
+                                                value={patientData.aguardandoParecer || ''}
+                                                placeholder="Ver tipos no sistema"
+                                                onChange={(e) => handleFieldChange(p.id, 'aguardandoParecer', e.target.value)}
+                                            />
+                                        ) : (
+                                            patientData.aguardandoParecer || 'N/A'
+                                        )}
+                                    </td>
+                                    <td>
+                                        {user.role === 'admin' ? (
+                                            <input
+                                                type="date"
+                                                className="table-input-date"
+                                                value={patientData.desdeParecer || ''}
+                                                onChange={(e) => handleFieldChange(p.id, 'desdeParecer', e.target.value)}
+                                            />
+                                        ) : (
+                                            formatDateDdMmYy(patientData.desdeParecer)
+                                        )}
+                                    </td>
+                                    <td>{calculateDaysWaiting(patientData.desdeParecer)}</td>
+                                    <td>{patientData.leitoAuditado}</td>
+                                    <td>
+                                        <button className="icon-button" onClick={() => onViewDetails(p)} aria-label={`Detalhes da Espera de Parecer de ${p.nome}`}>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        </button>
+                                    </td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>

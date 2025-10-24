@@ -36,12 +36,12 @@ const LeitoModal = ({ patient: initialPatient, user, onClose, onSave }: {
     patient: Patient;
     user: User;
     onClose: () => void;
-    onSave: (updatedPatient: Patient) => void;
+    onSave: (updatedPatient: Patient, user: User) => void;
 }) => {
     const [patient, setPatient] = useState<Patient>(initialPatient);
 
     const handleSaveClick = () => {
-        onSave(patient);
+        onSave(patient, user);
     };
 
     return (
@@ -64,17 +64,20 @@ const LeitoModal = ({ patient: initialPatient, user, onClose, onSave }: {
 };
 
 
-const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onUpdatePatients, title, subtitle }: { 
+const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient, onSavePatients, title, subtitle, showToast }: { 
     onBack: () => void, 
     user: User, 
     patients: Patient[], 
     onSelectPatient: (patient: Patient) => void,
-    onUpdatePatients: React.Dispatch<React.SetStateAction<Patient[]>>,
+    onSavePatient: (patient: Patient, user: User) => void,
+    onSavePatients: (patients: Patient[], user: User) => void,
     title: string;
     subtitle: string;
+    showToast: (message: string, type?: 'success' | 'error') => void;
 }) => {
     const [criticidadeFilter, setCriticidadeFilter] = useState<Patient['criticidade'][] | null>(null);
     const [editingLeitoPatient, setEditingLeitoPatient] = useState<Patient | null>(null);
+    const [editedPatients, setEditedPatients] = useState<Record<number, Partial<Patient>>>({});
 
     // Applied filters
     const [dateFilter, setDateFilter] = useState<string>('');
@@ -98,7 +101,7 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onUpdatePatie
     const tarefaDropdownRef = useRef<HTMLDivElement>(null);
 
     const uniqueHospitals = useMemo(() => [...new Set(patients.map(p => p.hospitalDestino))], [patients]);
-    const taskStatuses: NonNullable<Patient['taskStatus']>[] = ['Pendente', 'Em Andamento', 'Revisada'];
+    const taskStatuses: NonNullable<Patient['taskStatus']>[] = ['Atrasado', 'Auditados', 'Em Fila'];
     const guiaStatuses: GuiaStatus[] = [
         'Guia emitida / liberada', 'Guia negada', 'Guia cancelada', 'Guia sob auditoria',
         'Guia parcialmente liberada', 'Guia aguardando autorização', 'Guia pedido/aguard confirmação',
@@ -143,7 +146,7 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onUpdatePatie
                     stats[category].emFila++;
                 }
 
-                if (p.altaReplan && p.altaReplan.trim() !== '') {
+                if (p.altaReplan && p.altaReplan.trim() !== '' && p.taskStatus === 'Atrasado') {
                     stats[category].altaReplan++;
                 }
             }
@@ -188,7 +191,7 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onUpdatePatie
         }
     };
     
-    const handleSaveLeito = (updatedPatient: Patient) => {
+    const handleSaveLeito = (updatedPatient: Patient, user: User) => {
         const originalPatient = patients.find(p => p.id === updatedPatient.id);
         if (!originalPatient) return;
 
@@ -211,7 +214,7 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onUpdatePatie
                      newHistoryEntries.push({
                         data: today,
                         responsavel: user.name,
-                        diario: `Log de Leito: Atualizado registro da data ${formatDateDdMmYy(updatedRecord.date)} - Leito do Dia: ${updatedRecord.leitoDoDia}.`
+                        diario: `Log de Leito: Atualizado registro da data ${formatDateDdMmYy(updatedRecord.date)} - Leito do Dia: de '${originalRecord.leitoDoDia}' para '${updatedRecord.leitoDoDia}'.`
                     });
                 }
             }
@@ -222,60 +225,52 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onUpdatePatie
             historico: [...(updatedPatient.historico || []), ...newHistoryEntries]
         };
 
-        onUpdatePatients(prevPatients =>
-            prevPatients.map(p => (p.id === finalPatient.id ? finalPatient : p))
-        );
-        
+        onSavePatient(finalPatient, user);
         setEditingLeitoPatient(null);
     };
 
     const handleAltaFimChange = (patientId: number, newDate: string) => {
-        onUpdatePatients(prevPatients =>
-            prevPatients.map(p =>
-                p.id === patientId ? { ...p, altaFim: newDate } : p
-            )
-        );
+        const changes: Partial<Patient> = { altaFim: newDate };
+        if (!newDate) {
+            changes.motivoAlta = '';
+        }
+        setEditedPatients(prev => ({
+            ...prev,
+            [patientId]: { ...prev[patientId], ...changes }
+        }));
     };
 
     const handleMotivoAltaChange = (patientId: number, newMotivo: string) => {
-        onUpdatePatients(prevPatients =>
-            prevPatients.map(p =>
-                p.id === patientId ? { ...p, motivoAlta: newMotivo } : p
-            )
-        );
+        setEditedPatients(prev => ({
+            ...prev,
+            [patientId]: { ...prev[patientId], motivoAlta: newMotivo }
+        }));
     };
 
     const handleCriticidadeChange = (patientId: number, newValue: string) => {
         const newCriticidade = criticidadeValueMap[newValue];
-        onUpdatePatients(prevPatients => 
-            prevPatients.map(p => 
-                p.id === patientId ? { ...p, criticidade: newCriticidade } : p
-            )
-        );
+        setEditedPatients(prev => ({
+            ...prev,
+            [patientId]: { ...prev[patientId], criticidade: newCriticidade }
+        }));
     };
 
     const handleTaskStatusChange = (patientId: number) => {
-        onUpdatePatients(prevPatients => 
-            prevPatients.map(p => {
-                if (p.id === patientId) {
-                    let nextStatus: Patient['taskStatus'];
-                    switch (p.taskStatus) {
-                        case 'Pendente':
-                            nextStatus = 'Em Andamento';
-                            break;
-                        case 'Em Andamento':
-                            nextStatus = 'Revisada';
-                            break;
-                        case 'Revisada':
-                        default:
-                            nextStatus = 'Pendente';
-                            break;
-                    }
-                    return { ...p, taskStatus: nextStatus };
-                }
-                return p;
-            })
-        );
+        const originalPatient = patients.find(p => p.id === patientId);
+        if (!originalPatient) return;
+
+        const currentData = { ...originalPatient, ...(editedPatients[patientId] || {}) };
+
+        let nextStatus: Patient['taskStatus'];
+        switch (currentData.taskStatus) {
+            case 'Atrasado': nextStatus = 'Auditados'; break;
+            case 'Auditados': nextStatus = 'Em Fila'; break;
+            case 'Em Fila': default: nextStatus = 'Atrasado'; break;
+        }
+        setEditedPatients(prev => ({
+            ...prev,
+            [patientId]: { ...prev[patientId], taskStatus: nextStatus }
+        }));
     };
     
     const handleApplyFilters = () => {
@@ -316,6 +311,38 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onUpdatePatie
             const isSelected = prev.includes(status);
             return isSelected ? prev.filter(s => s !== status) : [...prev, status];
         });
+    };
+
+    const handleSaveAllChanges = () => {
+        let validationFailed = false;
+
+        const updatedPatientsList: Patient[] = [];
+
+        for (const patientIdStr in editedPatients) {
+            const patientId = Number(patientIdStr);
+            const changes = editedPatients[patientIdStr];
+            const originalPatient = patients.find(p => p.id === patientId)!;
+            
+            const finalData = { ...originalPatient, ...changes };
+
+            if (finalData.altaFim && !finalData.motivoAlta) {
+                showToast(`Para o paciente ${finalData.nome}, o Motivo da Alta é obrigatório.`, 'error');
+                validationFailed = true;
+                break;
+            }
+            updatedPatientsList.push(finalData);
+        }
+
+        if (validationFailed) {
+            return;
+        }
+
+        if (updatedPatientsList.length > 0) {
+            onSavePatients(updatedPatientsList, user);
+        }
+
+        setEditedPatients({});
+        showToast('Alterações salvas com sucesso!');
     };
 
 
@@ -428,7 +455,7 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onUpdatePatie
                         </div>
                     </div>
                     <div className="form-group" ref={tarefaDropdownRef}>
-                        <label>Tarefa:</label>
+                        <label>Status:</label>
                         <div className="multi-select-dropdown">
                             <button type="button" className="multi-select-dropdown-button" onClick={() => setIsTarefaDropdownOpen(prev => !prev)}>
                                 {tempTaskStatusFilter.length === 0 ? 'Todos' : tempTaskStatusFilter.length === 1 ? tempTaskStatusFilter[0] : `${tempTaskStatusFilter.length} selecionados`}
@@ -447,7 +474,8 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onUpdatePatie
                 </div>
                 <div className="filter-actions">
                     <button onClick={handleClearFilters} className="secondary-action-button">Limpar</button>
-                    <button onClick={handleApplyFilters} className="save-button">Aplicar</button>
+                    <button onClick={handleApplyFilters} className="save-button">Aplicar Filtros</button>
+                    <button onClick={handleSaveAllChanges} className="save-button" disabled={Object.keys(editedPatients).length === 0}>Salvar Alterações</button>
                 </div>
             </div>
 
@@ -459,22 +487,25 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onUpdatePatie
                             <th>Guia</th>
                             <th>Nome do Paciente</th>
                             <th>Data IH</th>
-                            <th>Data Alta</th>
-                            <th>Motivo Alta</th>
+                            <th>Data da Alta</th>
+                            <th>Motivo da Alta</th>
                             <th>Permanência</th>
                             <th>Criticidade</th>
                             <th>Hospital Destino</th>
                             <th>Leito do dia</th>
                             <th>Natureza da Guia</th>
                             <th>Status da Guia</th>
-                            <th>TAREFA</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredPatients.map(p => {
-                            const latestLeitoRecord = [...(p.leitoHistory || [])]
+                            const editedData = editedPatients[p.id] || {};
+                            const patientData = { ...p, ...editedData };
+
+                            const latestLeitoRecord = [...(patientData.leitoHistory || [])]
                                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-                            const leitoDoDia = latestLeitoRecord ? latestLeitoRecord.leitoDoDia : p.leitoAdmissao;
+                            const leitoDoDia = latestLeitoRecord ? latestLeitoRecord.leitoDoDia : patientData.leitoAdmissao;
                             
                             return (
                                 <tr key={p.id}>
@@ -483,27 +514,40 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onUpdatePatie
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                                         </button>
                                     </td>
-                                    <td>{p.guia}</td>
-                                    <td>{p.nome}</td>
-                                    <td>{formatDateDdMmYy(p.dataIH)}</td>
+                                    <td>{patientData.guia}</td>
+                                    <td>{patientData.nome}</td>
+                                    <td>{formatDateDdMmYy(patientData.dataIH)}</td>
                                     <td>
                                         {user.role === 'admin' ? (
-                                            <input
-                                                type="date"
-                                                className="table-input-date"
-                                                value={p.altaFim || ''}
-                                                onChange={(e) => handleAltaFimChange(p.id, e.target.value)}
-                                            />
+                                            <div className="date-input-wrapper">
+                                                <input
+                                                    type="date"
+                                                    className="table-input-date"
+                                                    value={patientData.altaFim || ''}
+                                                    onChange={(e) => handleAltaFimChange(p.id, e.target.value)}
+                                                />
+                                                {patientData.altaFim && (
+                                                    <button 
+                                                        className="clear-date-button" 
+                                                        onClick={() => handleAltaFimChange(p.id, '')}
+                                                        aria-label="Limpar data"
+                                                        title="Limpar data"
+                                                    >
+                                                        &times;
+                                                    </button>
+                                                )}
+                                            </div>
                                         ) : (
-                                            formatDateDdMmYy(p.altaFim)
+                                            formatDateDdMmYy(patientData.altaFim)
                                         )}
                                     </td>
                                     <td>
                                         {user.role === 'admin' ? (
                                             <select
                                                 className="table-select"
-                                                value={p.motivoAlta || ''}
+                                                value={patientData.motivoAlta || ''}
                                                 onChange={(e) => handleMotivoAltaChange(p.id, e.target.value)}
+                                                disabled={!patientData.altaFim}
                                             >
                                                 <option value="" disabled>Selecione</option>
                                                 {motivoAltaOptions.map(option => (
@@ -511,14 +555,14 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onUpdatePatie
                                                 ))}
                                             </select>
                                         ) : (
-                                            p.motivoAlta || 'N/A'
+                                            patientData.motivoAlta || 'N/A'
                                         )}
                                     </td>
-                                    <td>{calculatePermanencia(p.dataIH, p.altaFim)}</td>
+                                    <td>{calculatePermanencia(patientData.dataIH, patientData.altaFim)}</td>
                                     <td>
                                         <select
                                             className="table-select"
-                                            value={criticidadeDisplayMap[p.criticidade]}
+                                            value={criticidadeDisplayMap[patientData.criticidade]}
                                             onChange={(e) => handleCriticidadeChange(p.id, e.target.value)}
                                             style={{ color: 'var(--status-red-text)', fontWeight: 'bold' }}
                                             disabled={user.role !== 'admin'}
@@ -528,22 +572,22 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onUpdatePatie
                                             <option value="3">3</option>
                                         </select>
                                     </td>
-                                    <td>{p.hospitalDestino}</td>
+                                    <td>{patientData.hospitalDestino}</td>
                                     <td>
                                         <button className="leito-cell-button" onClick={() => setEditingLeitoPatient(p)}>
                                             {leitoDoDia}
                                         </button>
                                     </td>
-                                    <td>{p.natureza}</td>
-                                    <td><span className={`status-badge ${statusToClassName(p.status)}`}>{p.status}</span></td>
+                                    <td>{patientData.natureza}</td>
+                                    <td><span className={`status-badge ${statusToClassName(patientData.status)}`}>{patientData.status}</span></td>
                                     <td>
                                         <button
-                                            className={`task-status-badge ${p.taskStatus?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(' ', '-') || ''}`}
+                                            className={`task-status-badge ${patientData.taskStatus?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(' ', '-') || ''}`}
                                             onClick={() => user.role === 'admin' && handleTaskStatusChange(p.id)}
                                             disabled={user.role !== 'admin'}
-                                            aria-label={`Status da tarefa: ${p.taskStatus}. ${user.role === 'admin' ? 'Clique para alterar.' : ''}`}
+                                            aria-label={`Status da tarefa: ${patientData.taskStatus}. ${user.role === 'admin' ? 'Clique para alterar.' : ''}`}
                                         >
-                                            {p.taskStatus || 'N/A'}
+                                            {patientData.taskStatus || 'N/A'}
                                         </button>
                                     </td>
                                 </tr>

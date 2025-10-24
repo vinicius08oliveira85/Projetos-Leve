@@ -1,4 +1,4 @@
-import { Blob } from 'https://aistudiocdn.com/@google/genai@^1.25.0';
+import { Blob, HistoryEntry, Patient, User, Esperas } from '../types/index.ts';
 
 export function encode(bytes: Uint8Array) {
   let binary = '';
@@ -91,4 +91,85 @@ export const calculateDaysBetween = (startDateStr?: string, endDateStr?: string)
 
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     return `${diffDays} dias`;
+};
+
+
+const fieldLabels: Partial<Record<keyof Patient, string>> = {
+    tipoInternacao: 'Tipo Internação',
+    natureza: 'Natureza da Guia',
+    altaPrev: 'Alta Prevista',
+    altaReplan: 'Alta Replanejada',
+    altaFim: 'Data da Alta',
+    motivoAlta: 'Motivo da Alta',
+    criticidade: 'Criticidade',
+    programa: 'Programa NCI',
+    hospitalDestino: 'Hospital de Destino',
+    leitoAdmissao: 'Leito Admissional',
+    leitoAuditado: 'Leito Auditado',
+    evento: 'Evento',
+    reinternacao: 'Reinternação',
+    liminar: 'Liminar',
+    fraude: 'Fraude',
+    enviadoRetificacao: 'Enviado para Retificação',
+    tipoReinternacao: 'Tipo Reinternação',
+    taskStatus: 'Status da Tarefa',
+};
+
+const formatDateForHistory = (dateStr: string | undefined) => {
+    if (!dateStr) return 'não definida';
+    return formatDateDdMmYy(dateStr);
+}
+
+export const generateChangeHistory = (original: Patient, updated: Patient, user: User): HistoryEntry[] => {
+    const changes: HistoryEntry[] = [];
+    const today = new Date().toISOString().split('T')[0];
+
+    // Handle simple fields
+    for (const key in fieldLabels) {
+        const typedKey = key as keyof Patient;
+        const originalValue = original[typedKey];
+        const updatedValue = updated[typedKey];
+
+        if (JSON.stringify(originalValue) !== JSON.stringify(updatedValue)) {
+            let from = originalValue || 'vazio';
+            let to = updatedValue || 'vazio';
+
+            if (['altaPrev', 'altaReplan', 'altaFim'].includes(key)) {
+                from = formatDateForHistory(originalValue as string | undefined);
+                to = formatDateForHistory(updatedValue as string | undefined);
+            }
+            
+            if (from !== to) {
+                changes.push({
+                    data: today,
+                    responsavel: user.name,
+                    diario: `Log de Alteração: O campo '${fieldLabels[typedKey]}' foi alterado de '${from}' para '${to}'.`
+                });
+            }
+        }
+    }
+    
+    // Special handling for 'esperas' object
+    const esperaLabels: Record<keyof Esperas, string> = {
+        cirurgia: 'Espera Cirurgia',
+        exame: 'Espera Exame',
+        parecer: 'Espera Parecer',
+        desospitalizacao: 'Espera Desospitalização'
+    };
+
+    const originalEsperas = original.esperas;
+    const updatedEsperas = updated.esperas;
+    for (const key in originalEsperas) {
+        const typedKey = key as keyof Esperas;
+        if (originalEsperas[typedKey] !== updatedEsperas[typedKey]) {
+            const status = updatedEsperas[typedKey] ? 'ativada' : 'desativada';
+            changes.push({
+                data: today,
+                responsavel: user.name,
+                diario: `Log de Alteração: A pendência '${esperaLabels[typedKey]}' foi ${status}.`
+            });
+        }
+    }
+
+    return changes;
 };

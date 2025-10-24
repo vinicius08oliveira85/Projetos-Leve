@@ -79,7 +79,7 @@ const FotoDoDia = ({ onBack, onBackToCards, onSelectPatient, user, patients, onU
     const [editingLeitoPatient, setEditingLeitoPatient] = useState<Patient | null>(null);
 
     const uniqueHospitals = useMemo(() => ['Todos', ...new Set(patients.map(p => p.hospitalDestino))], [patients]);
-    const taskStatuses: (Patient['taskStatus'] | undefined)[] = ['Pendente', 'Em Andamento', 'Revisada'];
+    const taskStatuses: (Patient['taskStatus'] | undefined)[] = ['Atrasado', 'Auditados', 'Em Fila'];
 
 
     const filteredPatients = useMemo(() => {
@@ -147,9 +147,16 @@ const FotoDoDia = ({ onBack, onBackToCards, onSelectPatient, user, patients, onU
 
     const handleAltaFimChange = (patientId: number, newDate: string) => {
         onUpdatePatients(prevPatients =>
-            prevPatients.map(p =>
-                p.id === patientId ? { ...p, altaFim: newDate } : p
-            )
+            prevPatients.map(p => {
+                if (p.id === patientId) {
+                    const updatedPatient = { ...p, altaFim: newDate };
+                    if (!newDate) {
+                        updatedPatient.motivoAlta = '';
+                    }
+                    return updatedPatient;
+                }
+                return p;
+            })
         );
     };
 
@@ -176,15 +183,15 @@ const FotoDoDia = ({ onBack, onBackToCards, onSelectPatient, user, patients, onU
                 if (p.id === patientId) {
                     let nextStatus: Patient['taskStatus'];
                     switch (p.taskStatus) {
-                        case 'Pendente':
-                            nextStatus = 'Em Andamento';
+                        case 'Atrasado':
+                            nextStatus = 'Auditados';
                             break;
-                        case 'Em Andamento':
-                            nextStatus = 'Revisada';
+                        case 'Auditados':
+                            nextStatus = 'Em Fila';
                             break;
-                        case 'Revisada':
+                        case 'Em Fila':
                         default:
-                            nextStatus = 'Pendente';
+                            nextStatus = 'Atrasado';
                             break;
                     }
                     return { ...p, taskStatus: nextStatus };
@@ -214,7 +221,7 @@ const FotoDoDia = ({ onBack, onBackToCards, onSelectPatient, user, patients, onU
                      </select>
                 </div>
                 <div className="form-group">
-                    <label>Tarefa:</label>
+                    <label>Status:</label>
                     <select value={taskStatusFilter} onChange={(e) => setTaskStatusFilter(e.target.value)}>
                         <option value="Todos">Todos</option>
                         {taskStatuses.map(s => s && <option key={s} value={s}>{s}</option>)}
@@ -233,15 +240,15 @@ const FotoDoDia = ({ onBack, onBackToCards, onSelectPatient, user, patients, onU
                             <th>Guia</th>
                             <th>Nome do Paciente</th>
                             <th>Data IH</th>
-                            <th>Data Alta</th>
-                            <th>Motivo Alta</th>
+                            <th>Data da Alta</th>
+                            <th>Motivo da Alta</th>
                             <th>Permanência</th>
                             <th>Criticidade</th>
                             <th>Hospital Destino</th>
                             <th>Leito do dia</th>
                             <th>Natureza da Guia</th>
                             <th>Status da Guia</th>
-                            <th>TAREFA</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -290,6 +297,7 @@ const FotoDoDia = ({ onBack, onBackToCards, onSelectPatient, user, patients, onU
                                                 className="table-select"
                                                 value={p.motivoAlta || ''}
                                                 onChange={(e) => handleMotivoAltaChange(p.id, e.target.value)}
+                                                disabled={!p.altaFim}
                                             >
                                                 <option value="" disabled>Selecione</option>
                                                 {motivoAltaOptions.map(option => (

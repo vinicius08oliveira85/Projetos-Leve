@@ -7,7 +7,7 @@ const DetalhesEsperaExame = ({ patient, onBack, user, onUpdatePatient, showToast
     patient: Patient,
     onBack: () => void,
     user: User,
-    onUpdatePatient: (patient: Patient) => void,
+    onUpdatePatient: (patient: Patient, user: User) => void,
     showToast: (message: string) => void
 }) => {
     const [details, setDetails] = useState<EsperaExameDetalhes>(patient.esperaExameDetalhes || {});
@@ -22,7 +22,7 @@ const DetalhesEsperaExame = ({ patient, onBack, user, onUpdatePatient, showToast
             ...patient,
             esperaExameDetalhes: details
         };
-        onUpdatePatient(updatedPatient);
+        onUpdatePatient(updatedPatient, user);
         showToast('Alterações salvas com sucesso!');
     };
 

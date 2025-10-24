@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'https://aistudiocdn.com/react@^19.2.0';
 import { User, Patient, MenuItem, Esperas } from './types/index.ts';
 import { mockPatients } from './data/mockPatients.ts';
+import { generateChangeHistory } from './utils/helpers.ts';
 import LoginScreen from './pages/LoginScreen.tsx';
 import MainMenu from './pages/MainMenu.tsx';
 import MapaInternacao from './pages/MapaInternacao.tsx';
@@ -65,13 +66,43 @@ const App = () => {
         setSelectedPatient(null);
     };
 
-    const handleUpdatePatient = (updatedPatient: Patient) => {
+    const handleUpdatePatient = (updatedPatient: Patient, user: User) => {
+        const originalPatient = patients.find(p => p.id === updatedPatient.id);
+        if (!originalPatient) return;
+
+        const historyEntries = generateChangeHistory(originalPatient, updatedPatient, user);
+        
+        const finalPatient = {
+            ...updatedPatient,
+            historico: [...(updatedPatient.historico || []), ...historyEntries]
+        };
+
         setPatients(prevPatients =>
-            prevPatients.map(p => (p.id === updatedPatient.id ? updatedPatient : p))
+            prevPatients.map(p => (p.id === finalPatient.id ? finalPatient : p))
         );
-        if (selectedPatient && selectedPatient.id === updatedPatient.id) {
-            setSelectedPatient(updatedPatient);
+        if (selectedPatient && selectedPatient.id === finalPatient.id) {
+            setSelectedPatient(finalPatient);
         }
+    };
+    
+    const handleUpdateMultiplePatients = (updatedPatients: Patient[], user: User) => {
+        const updatedPatientMap = new Map<number, Patient>();
+
+        for (const updated of updatedPatients) {
+            const original = patients.find(p => p.id === updated.id);
+            if (!original) continue;
+
+            const historyEntries = generateChangeHistory(original, updated, user);
+            const finalPatient = {
+                ...updated,
+                historico: [...(updated.historico || []), ...historyEntries],
+            };
+            updatedPatientMap.set(updated.id, finalPatient);
+        }
+        
+        setPatients(currentPatients => 
+            currentPatients.map(p => updatedPatientMap.get(p.id) || p)
+        );
     };
 
     const handleBackFromDetails = () => {
@@ -135,7 +166,7 @@ const App = () => {
                         patient={selectedPatient} 
                         onBack={handleBackFromDetails} 
                         user={user}
-                        onUpdatePatient={handleUpdatePatient}
+                        onSavePatient={handleUpdatePatient}
                         showToast={showToast}
                     />;
         }
@@ -149,9 +180,11 @@ const App = () => {
                             user={user} 
                             patients={patients} 
                             onSelectPatient={handleSelectPatient}
-                            onUpdatePatients={setPatients}
+                            onSavePatient={handleUpdatePatient}
+                            onSavePatients={handleUpdateMultiplePatients}
                             title={pageInfo?.title ?? 'Mapa de Internação'}
                             subtitle={pageInfo?.description ?? ''} 
+                            showToast={showToast}
                         />;
             case 'Mapa de Espera':
                 return <MapaDeEspera 
@@ -159,7 +192,7 @@ const App = () => {
                             onSelectPatient={handleSelectPatient} 
                             user={user} 
                             patients={patients} 
-                            onUpdatePatients={setPatients} 
+                            onSavePatients={handleUpdateMultiplePatients} 
                             showToast={showToast}
                             title={pageInfo?.title ?? 'Mapa de Espera'}
                             subtitle={pageInfo?.description ?? ''}
@@ -171,7 +204,7 @@ const App = () => {
                             onViewDetails={handleViewSurgeryWaitDetails}
                             user={user}
                             patients={patients}
-                            onUpdatePatients={setPatients}
+                            onSavePatients={handleUpdateMultiplePatients}
                             showToast={showToast}
                         />;
             case 'Pacientes Aguardando Exame':
@@ -180,7 +213,7 @@ const App = () => {
                            onViewDetails={handleViewExamWaitDetails}
                            user={user}
                            patients={patients}
-                           onUpdatePatients={setPatients}
+                           onSavePatients={handleUpdateMultiplePatients}
                            showToast={showToast}
                        />;
             case 'Pacientes Aguardando Parecer':
@@ -189,7 +222,7 @@ const App = () => {
                            onViewDetails={handleViewParecerWaitDetails}
                            user={user}
                            patients={patients}
-                           onUpdatePatients={setPatients}
+                           onSavePatients={handleUpdateMultiplePatients}
                            showToast={showToast}
                        />;
             case 'Pacientes Aguardando Desospitalização':
@@ -198,7 +231,7 @@ const App = () => {
                            onViewDetails={handleViewDesospitalizacaoWaitDetails}
                            user={user}
                            patients={patients}
-                           onUpdatePatients={setPatients}
+                           onSavePatients={handleUpdateMultiplePatients}
                            showToast={showToast}
                        />;
             case 'Detalhes da Espera de Cirurgia':
