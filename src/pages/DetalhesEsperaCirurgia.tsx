@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'https://aistudiocdn.com/react@^19.2.0';
 import { Patient, User, EsperaCirurgiaDetalhes } from '../types/index.ts';
-import { calculateDaysBetween } from '../utils/helpers.ts';
+import { calculateDaysBetween, formatDateDdMmYy } from '../utils/helpers.ts';
 import AppHeader from '../components/AppHeader.tsx';
 
 const DetalhesEsperaCirurgia = ({ patient, onBack, user, onUpdatePatient, showToast }: {
@@ -27,6 +27,27 @@ const DetalhesEsperaCirurgia = ({ patient, onBack, user, onUpdatePatient, showTo
     };
 
     const tempoEspera = useMemo(() => calculateDaysBetween(details.dataInicio, details.dataFim), [details.dataInicio, details.dataFim]);
+
+    const historyData = useMemo(() => {
+        const stages = [
+            { label: 'Aguardando Envio do Pedido', start: details.dataInicio, end: details.envioPedido },
+            { label: 'Aguardando Solicitação OPME', start: details.envioPedido, end: details.opmeSolicitado },
+            { label: 'Aguardando Recebimento OPME', start: details.opmeSolicitado, end: details.opmeRecebido },
+            { label: 'Aguardando Agendamento', start: details.opmeRecebido, end: details.dataAgendamento },
+            { label: 'Aguardando Realização', start: details.dataAgendamento, end: details.dataRealizacao },
+            { label: 'Aguardando Finalização', start: details.dataRealizacao, end: details.dataFim },
+        ];
+
+        return stages
+            .filter(stage => stage.start && stage.end)
+            .map(stage => ({
+                status: stage.label,
+                startDate: stage.start!,
+                endDate: stage.end!,
+                duration: calculateDaysBetween(stage.start, stage.end),
+            }));
+    }, [details]);
+
 
     return (
         <div className="page-container">
@@ -81,6 +102,41 @@ const DetalhesEsperaCirurgia = ({ patient, onBack, user, onUpdatePatient, showTo
                         </div>
                     </div>
                 </fieldset>
+
+                <fieldset style={{ marginTop: '24px' }}>
+                    <legend>Histórico de Status da Espera</legend>
+                    <div className="table-container" style={{ padding: 0 }}>
+                        <table className="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Data Início</th>
+                                    <th>Data Fim</th>
+                                    <th>Tempo de Atuação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {historyData.length > 0 ? (
+                                    historyData.map((item, index) => (
+                                        <tr key={index}>
+                                            <td>{item.status}</td>
+                                            <td>{formatDateDdMmYy(item.startDate)}</td>
+                                            <td>{formatDateDdMmYy(item.endDate)}</td>
+                                            <td>{item.duration}</td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={4} style={{ textAlign: 'center', padding: '20px' }}>
+                                            Dados insuficientes para gerar o histórico.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </fieldset>
+
                 {user.role === 'admin' && (
                     <div className="details-actions">
                         <button onClick={handleSave} className="save-details-btn">Salvar Alterações</button>

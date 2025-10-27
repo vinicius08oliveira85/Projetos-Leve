@@ -84,12 +84,16 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
     const [hospitalFilter, setHospitalFilter] = useState<string[]>([]);
     const [taskStatusFilter, setTaskStatusFilter] = useState<NonNullable<Patient['taskStatus']>[]>([]);
     const [guiaStatusFilter, setGuiaStatusFilter] = useState<GuiaStatus[]>([]);
+    const [patientStatusFilter, setPatientStatusFilter] = useState<'Internados' | 'Com Alta'>('Internados');
+
 
     // Temporary filters for UI
     const [tempDateFilter, setTempDateFilter] = useState(dateFilter);
     const [tempHospitalFilter, setTempHospitalFilter] = useState(hospitalFilter);
     const [tempTaskStatusFilter, setTempTaskStatusFilter] = useState(taskStatusFilter);
     const [tempGuiaStatusFilter, setTempGuiaStatusFilter] = useState(guiaStatusFilter);
+    const [tempPatientStatusFilter, setTempPatientStatusFilter] = useState(patientStatusFilter);
+
     
     // Dropdown visibility
     const [isHospitalDropdownOpen, setIsHospitalDropdownOpen] = useState(false);
@@ -168,7 +172,9 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                 const hospitalMatch = hospitalFilter.length === 0 || hospitalFilter.includes(p.hospitalDestino);
                 const taskStatusMatch = taskStatusFilter.length === 0 || (p.taskStatus && taskStatusFilter.includes(p.taskStatus));
                 const guiaStatusMatch = guiaStatusFilter.length === 0 || guiaStatusFilter.includes(p.status);
-                return criticidadeMatch && dateMatch && hospitalMatch && taskStatusMatch && guiaStatusMatch;
+                const patientStatusMatch = patientStatusFilter === 'Internados' ? !p.altaFim : !!p.altaFim;
+
+                return criticidadeMatch && dateMatch && hospitalMatch && taskStatusMatch && guiaStatusMatch && patientStatusMatch;
             })
             .sort((a, b) => {
                 const priority: { [key in GuiaStatus]?: number } = { 
@@ -181,7 +187,7 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                 if (aPrio > bPrio) return 1;
                 return 0;
             });
-    }, [patients, criticidadeFilter, dateFilter, hospitalFilter, taskStatusFilter, guiaStatusFilter]);
+    }, [patients, criticidadeFilter, dateFilter, hospitalFilter, taskStatusFilter, guiaStatusFilter, patientStatusFilter]);
 
     const handleSelectReview = (criticidade: Patient['criticidade'][]) => {
         if (JSON.stringify(criticidadeFilter) === JSON.stringify(criticidade)) {
@@ -278,6 +284,7 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
         setHospitalFilter(tempHospitalFilter);
         setGuiaStatusFilter(tempGuiaStatusFilter);
         setTaskStatusFilter(tempTaskStatusFilter);
+        setPatientStatusFilter(tempPatientStatusFilter);
     };
     
     const handleClearFilters = () => {
@@ -285,11 +292,13 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
         setTempHospitalFilter([]);
         setTempGuiaStatusFilter([]);
         setTempTaskStatusFilter([]);
+        setTempPatientStatusFilter('Internados');
         
         setDateFilter('');
         setHospitalFilter([]);
         setGuiaStatusFilter([]);
         setTaskStatusFilter([]);
+        setPatientStatusFilter('Internados');
     };
     
     const handleHospitalMultiChange = (hospital: string) => {
@@ -416,6 +425,13 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
 
             <div className="filter-bar" style={{ marginTop: '24px', marginBottom: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, borderBottom: '1px solid var(--border-color)' }}>
                 <div className="filter-controls">
+                     <div className="form-group">
+                        <label>Status do Paciente:</label>
+                        <select value={tempPatientStatusFilter} onChange={(e) => setTempPatientStatusFilter(e.target.value as any)}>
+                            <option value="Internados">Internados</option>
+                            <option value="Com Alta">Com Alta</option>
+                        </select>
+                    </div>
                     <div className="form-group">
                         <label>Portal do tempo (Data IH):</label>
                         <input type="date" value={tempDateFilter} onChange={(e) => setTempDateFilter(e.target.value)} />
