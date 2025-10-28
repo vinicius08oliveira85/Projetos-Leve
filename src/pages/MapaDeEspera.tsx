@@ -4,11 +4,13 @@ import AppHeader from '../components/AppHeader.tsx';
 import { formatDateDdMmYy } from '../utils/helpers.ts';
 
 const criticidadeDisplayMap: { [key in Patient['criticidade']]: string } = {
+    'Revisão Padrão': '0',
     'Diário 24h': '1',
     '48h': '2',
     '72h': '3',
 };
 const criticidadeValueMap: { [key: string]: Patient['criticidade'] } = {
+    '0': 'Revisão Padrão',
     '1': 'Diário 24h',
     '2': '48h',
     '3': '72h',
@@ -165,9 +167,10 @@ const MapaDeEspera = ({ onBack, onSelectPatient, user, patients, onSavePatients,
                                             className="table-select"
                                             value={criticidadeDisplayMap[patientData.criticidade]}
                                             onChange={(e) => handleCriticidadeChange(p.id, e.target.value)}
-                                            style={{ color: 'var(--status-red-text)', fontWeight: 'bold' }}
+                                            style={patientData.criticidade === 'Revisão Padrão' ? {} : { color: 'var(--status-red-text)', fontWeight: 'bold' }}
                                             disabled={user.role !== 'admin'}
                                         >
+                                            <option value="0">0</option>
                                             <option value="1">1</option>
                                             <option value="2">2</option>
                                             <option value="3">3</option>

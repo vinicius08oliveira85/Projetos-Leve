@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'https://aistudiocdn.com/react@^19.2.0';
-import { Patient, User, Esperas, HistoryEntry, LeitoType } from '../types/index.ts';
+import { Patient, User, Esperas, HistoryEntry, LeitoType, GuiaStatus } from '../types/index.ts';
 import { GoogleGenAI, LiveServerMessage, Blob, Modality } from 'https://aistudiocdn.com/@google/genai@^1.25.0';
 import { createBlob, formatDateDdMmYy } from '../utils/helpers.ts';
 import AppHeader from '../components/AppHeader.tsx';
@@ -15,23 +15,36 @@ const motivoAltaOptions = [
     'ADMINISTRATIVA',
 ];
 
-type SessionKey = 'dadosPaciente' | 'dadosInternacao' | 'gestaoLeito' | 'historico' | 'criticidadePrazos' | 'pendenciasEspera';
+type SessionKey = 'dadosPaciente' | 'dadosInternacao' | 'gestaoLeito' | 'historico' | 'historicoAlteracoes' | 'criticidadePrazos' | 'pendenciasEspera';
 
 const sessions: { id: SessionKey, title: string }[] = [
     { id: 'dadosPaciente', title: 'Dados do Paciente' },
     { id: 'dadosInternacao', title: 'Dados da Internação' },
     { id: 'gestaoLeito', title: 'Gestão de Leito' },
     { id: 'historico', title: 'Histórico de Internação' },
+    { id: 'historicoAlteracoes', title: 'Histórico de Alterações / Anotações' },
     { id: 'criticidadePrazos', title: 'Criticidade e Prazos' },
     { id: 'pendenciasEspera', title: 'Pendências e Espera' },
 ];
 
-const PatientDetails = ({ patient: initialPatient, onBack, user, onSavePatient, showToast }: { 
+const statusToClassName = (status: GuiaStatus) => {
+    return status
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+};
+
+
+const PatientDetails = ({ patient: initialPatient, allPatients, onBack, user, onSavePatient, showToast, onSelectPatient }: { 
     patient: Patient, 
+    allPatients: Patient[],
     onBack: () => void, 
     user: User, 
     onSavePatient: (patient: Patient, user: User) => void, 
-    showToast: (message: string, type?: 'success'|'error') => void 
+    showToast: (message: string, type?: 'success'|'error') => void,
+    onSelectPatient: (patient: Patient) => void 
 }) => {
     const [patient, setPatient] = useState<Patient>(initialPatient);
     const [isRecording, setIsRecording] = useState(false);
@@ -45,6 +58,10 @@ const PatientDetails = ({ patient: initialPatient, onBack, user, onSavePatient, 
     const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
     const mediaStreamSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
     const accumulatedTranscriptionRef = useRef('');
+
+    useEffect(() => {
+        setPatient(initialPatient);
+    }, [initialPatient]);
 
     useEffect(() => {
         return () => {
@@ -186,38 +203,11 @@ const PatientDetails = ({ patient: initialPatient, onBack, user, onSavePatient, 
             return;
         }
 
-        const patientWithHistory = { ...patient };
-        const originalPatient = initialPatient;
-
-        const newHistoryEntries: HistoryEntry[] = [];
-        const today = new Date().toISOString().split('T')[0];
-
-        // Compare leitoHistory for changes
-        const originalLeitoHistory = originalPatient.leitoHistory || [];
-        const updatedLeitoHistory = patientWithHistory.leitoHistory || [];
-        
-        updatedLeitoHistory.forEach(updatedRecord => {
-            const originalRecord = originalLeitoHistory.find(r => r.id === updatedRecord.id);
-            if (!originalRecord) {
-                newHistoryEntries.push({
-                    data: today,
-                    responsavel: user.name,
-                    diario: `Log de Leito: Adicionado registro para data ${formatDateDdMmYy(updatedRecord.date)} - Leito do Dia: ${updatedRecord.leitoDoDia}.`
-                });
-            } else if (originalRecord.leitoDoDia !== updatedRecord.leitoDoDia) {
-                newHistoryEntries.push({
-                    data: today,
-                    responsavel: user.name,
-                    diario: `Log de Leito: Atualizado registro da data ${formatDateDdMmYy(updatedRecord.date)} - Leito do Dia: de '${originalRecord.leitoDoDia}' para '${updatedRecord.leitoDoDia}'.`
-                });
-            }
-        });
-        
-        if (newHistoryEntries.length > 0) {
-            patientWithHistory.historico = [...(patientWithHistory.historico || []), ...newHistoryEntries];
-        }
-
-        onSavePatient(patientWithHistory, user);
+        // The logic for generating history is centralized in App.tsx's handleUpdatePatient,
+        // which uses the comprehensive generateChangeHistory helper. We just need to
+        // pass the updated patient state. This will correctly log all changes,
+        // including additions, modifications, and deletions in "Gestão de Leito".
+        onSavePatient(patient, user);
         showToast('Alterações salvas com sucesso!');
     };
     
@@ -234,7 +224,7 @@ const PatientDetails = ({ patient: initialPatient, onBack, user, onSavePatient, 
                 return (
                     <fieldset>
                         <legend>Dados Principais</legend>
-                        <div className="form-grid">
+                        <div className="form-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px 24px' }}>
                             <div className="form-group">
                                 <label>Nome</label>
                                 <input type="text" value={patient.nome} disabled />
@@ -269,7 +259,7 @@ const PatientDetails = ({ patient: initialPatient, onBack, user, onSavePatient, 
                             </div>
                              <div className="form-group">
                                 <label>Idade</label>
-                                <input type="text" value={`${patient.idade} anos`} disabled />
+                                <input type="text" value={patient.idade} disabled />
                             </div>
                             <div className="form-group">
                                 <label>Natureza da Guia</label>
@@ -305,99 +295,123 @@ const PatientDetails = ({ patient: initialPatient, onBack, user, onSavePatient, 
             case 'dadosInternacao':
                 return (
                     <fieldset>
-                        <legend>Dados da internação</legend>
-                        <div className="form-grid">
+                        <legend>Dados da Internação</legend>
+                        <div className="form-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px 24px' }}>
+                            {/* Row 1 */}
                             <div className="form-group">
-                                <label>Data IH</label>
+                                <label>Paciente</label>
+                                <input type="text" value={patient.nome} disabled />
+                            </div>
+                            <div className="form-group">
+                                <label>CPF</label>
+                                <input type="text" value={patient.cpf} disabled />
+                            </div>
+                            <div className="form-group">
+                                <label>Leito Ontem</label>
                                 <input type="text" value={formatDateDdMmYy(patient.dataIH)} disabled />
                             </div>
+                            {/* Row 2 */}
                             <div className="form-group">
-                                <label>CID IH</label>
-                                <input type="text" value={patient.cidIH} disabled />
-                            </div>
-                            <div className="form-group">
-                                <label>Tipo Internação</label>
-                                <input type="text" value={patient.tipoInternacao} disabled />
-                            </div>
-                             <div className="form-group">
-                                <label>Hospital de Origem</label>
-                                <input type="text" value={patient.hospitalOrigem} disabled />
-                            </div>
-                            <div className="form-group">
-                                <label>Leito Admissional</label>
-                                <select name="leitoAdmissao" value={patient.leitoAdmissao} onChange={handleInputChange} disabled={user.role !== 'admin'}>
-                                    {leitoOptions.map(option => <option key={option} value={option}>{option}</option>)}
+                                <label>Leito Hoje</label>
+                                <select name="leitoHoje" value={patient.leitoHoje} onChange={handleInputChange} disabled={user.role !== 'admin'}>
+                                    {[...leitoOptions, 'Alta'].map(option => <option key={option} value={option}>{option}</option>)}
                                 </select>
                             </div>
                             <div className="form-group">
-                                <label>Hospital de Destino</label>
-                                 <input type="text" name="hospitalDestino" value={patient.hospitalDestino} onChange={handleInputChange} disabled={user.role !== 'admin'} />
-                            </div>
-                            <div className="form-group">
-                                <label>Natureza da Guia</label>
-                                <select name="natureza" value={patient.natureza} onChange={handleInputChange} disabled={user.role !== 'admin'}>
-                                    <option>CIRÚRGICA</option>
-                                    <option>CLÍNICA</option>
-                                    <option>OBSTÉTRICA</option>
-                                    <option>PEDIÁTRICA</option>
-                                    <option>PSIQUIÁTRICA</option>
+                                <label>Leito Auditado</label>
+                                <select name="leitoAuditado" value={patient.leitoAuditado} onChange={handleInputChange} disabled={user.role !== 'admin'}>
+                                    <option value="">Selecione</option>
+                                    {[...leitoOptions, 'Alta'].map(option => <option key={option} value={option}>{option}</option>)}
                                 </select>
                             </div>
-                             <div className="form-group">
-                                <label>Evento</label>
-                                <select name="evento" value={patient.evento} onChange={handleInputChange} disabled={user.role !== 'admin'}>
-                                    <option>Agudo</option>
-                                    <option>Crônico agudizado</option>
-                                </select>
+                            <div className="form-group form-group-highlight">
+                                <label>Alta Prev</label>
+                                <input type="date" name="altaPrev" value={patient.altaPrev || ''} onChange={handleInputChange} disabled={user.role !== 'admin'} />
                             </div>
-                            <div className="form-group">
-                                <label>Reinternação</label>
-                                <select name="reinternacao" value={patient.reinternacao} onChange={handleInputChange} disabled={user.role !== 'admin'}>
-                                    <option>Sim</option>
-                                    <option>Não</option>
-                                </select>
+                            {/* Row 3 */}
+                            <div className="form-group form-group-highlight">
+                                <label>Alta Replan</label>
+                                <input type="date" name="altaReplan" value={patient.altaReplan || ''} onChange={handleInputChange} disabled={user.role !== 'admin'} />
                             </div>
-                            <div className="form-group">
+                            <div className="form-group form-group-highlight">
+                                <label>Alta FIM</label>
+                                <input type="date" name="altaFim" value={patient.altaFim || ''} onChange={handleInputChange} disabled={user.role !== 'admin'} />
+                            </div>
+                            <div className="form-group form-group-highlight">
+                                <label>Produto</label>
+                                <input type="text" name="produto" value={patient.produto || ''} onChange={handleInputChange} disabled={user.role !== 'admin'} />
+                            </div>
+                            {/* Row 4 */}
+                            <div className="form-group form-group-highlight">
                                 <label>Liminar</label>
                                 <select name="liminar" value={patient.liminar} onChange={handleInputChange} disabled={user.role !== 'admin'}>
-                                    <option>Sim</option>
                                     <option>Não</option>
+                                    <option>Sim</option>
+                                </select>
+                            </div>
+                            <div className="form-group form-group-highlight">
+                                <label>Carência</label>
+                                <select name="carencia" value={patient.carencia || 'Não'} onChange={handleInputChange} disabled={user.role !== 'admin'}>
+                                    <option>Não</option>
+                                    <option>Sim</option>
+                                </select>
+                            </div>
+                            <div className="form-group form-group-highlight">
+                                <label>CPT</label>
+                                <select name="cpt" value={patient.cpt || 'Não'} onChange={handleInputChange} disabled={user.role !== 'admin'}>
+                                    <option>Não</option>
+                                    <option>Sim</option>
+                                </select>
+                            </div>
+                            {/* Row 5 */}
+                            <div className="form-group">
+                                <label>CID Entrada</label>
+                                <input type="text" name="cidIH" value={patient.cidIH} onChange={handleInputChange} disabled={user.role !== 'admin'} />
+                            </div>
+                            <div className="form-group form-group-highlight">
+                                <label>CID Evolutivo</label>
+                                <input type="text" name="cidEvolutivo" value={patient.cidEvolutivo || ''} onChange={handleInputChange} disabled={user.role !== 'admin'} />
+                            </div>
+                            <div className="form-group form-group-highlight">
+                                <label>CID Alta</label>
+                                <input type="text" name="cidAlta" value={patient.cidAlta || ''} onChange={handleInputChange} disabled={user.role !== 'admin'} />
+                            </div>
+                            {/* Row 6 */}
+                            <div className="form-group">
+                                <label>Criticidade</label>
+                                <select name="criticidade" value={patient.criticidade} onChange={handleInputChange} disabled={user.role !== 'admin'}>
+                                    <option value="Revisão Padrão">0-Revisão Padrão</option>
+                                    <option value="Diário 24h">1-Rev diária</option>
+                                    <option value="48h">2-Rev 48h</option>
+                                    <option value="72h">3-Rev 72h</option>
                                 </select>
                             </div>
                             <div className="form-group">
-                                <label>Fraude</label>
-                                <select name="fraude" value={patient.fraude} onChange={handleInputChange} disabled={user.role !== 'admin'}>
-                                    <option>Sim</option>
-                                    <option>Não</option>
-                                </select>
+                                <label>Nome do Médico</label>
+                                <input type="text" name="medico" value={patient.medico || ''} onChange={handleInputChange} disabled={user.role !== 'admin'} />
                             </div>
-                             <div className="form-group">
-                                <label>Enviado p/ Retificação</label>
-                                <select name="enviadoRetificacao" value={patient.enviadoRetificacao} onChange={handleInputChange} disabled={user.role !== 'admin'}>
-                                    <option>Sim</option>
-                                    <option>Não</option>
-                                </select>
+                            <div className="form-group form-group-highlight">
+                                <label>Telefone</label>
+                                <input type="tel" name="telefone" value={patient.telefone || ''} onChange={handleInputChange} disabled={user.role !== 'admin'} />
                             </div>
-                            {patient.reinternacao === 'Sim' && (
-                                <div className="form-group full-width">
-                                    <label>Tipo Reinternação</label>
-                                    <div className="radio-group-horizontal">
-                                        {['24h', '48h', '72h', '7dias', '10dias', '15dias', '30 dias'].map(value => (
-                                            <label key={value}>
-                                                <input
-                                                    type="radio"
-                                                    name="tipoReinternacao"
-                                                    value={value}
-                                                    checked={patient.tipoReinternacao === value}
-                                                    disabled={user.role !== 'admin'}
-                                                    onChange={handleInputChange}
-                                                />
-                                                {value}
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+                            {/* Row 7 */}
+                            <div className="form-group">
+                                <label>Última consulta</label>
+                                <input type="date" name="ultimaConsulta" value={patient.ultimaConsulta || ''} onChange={handleInputChange} disabled={user.role !== 'admin'} />
+                            </div>
+                            <div className="form-group full-width" style={{ gridColumn: 'span 2' }}>
+                                {/* placeholder for alignment */}
+                            </div>
+                            {/* Row 8 */}
+                            <div className="form-group full-width" style={{ gridColumn: '1 / -1' }}>
+                                <label>Diagnóstico</label>
+                                <textarea name="diagnosticos" rows={2} value={patient.diagnosticos} onChange={handleInputChange} disabled={user.role !== 'admin'} />
+                            </div>
+                            {/* Row 9 */}
+                            <div className="form-group full-width" style={{ gridColumn: '1 / -1' }}>
+                                <label>Notas da Regulação</label>
+                                <textarea name="notasRegulacao" rows={2} value={patient.notasRegulacao || ''} onChange={handleInputChange} disabled={user.role !== 'admin'} />
+                            </div>
                         </div>
                     </fieldset>
                 );
@@ -409,10 +423,73 @@ const PatientDetails = ({ patient: initialPatient, onBack, user, onSavePatient, 
                     </fieldset>
                 );
             case 'historico':
+                 const patientAdmissions = allPatients
+                    .filter(p => p.cpf === initialPatient.cpf)
+                    .sort((a, b) => new Date(b.dataIH).getTime() - new Date(a.dataIH).getTime());
+
+                 return (
+                    <fieldset>
+                        <legend>Histórico de Internação</legend>
+                        <p style={{ marginBottom: '16px', color: 'var(--light-text-color)' }}>
+                            Esta sessão apresenta o histórico completo de todas as internações do paciente (vinculadas por CPF), compilado das Guias de Internação.
+                        </p>
+                        <div className="table-container" style={{ padding: 0 }}>
+                            <table className="patient-table">
+                                <thead>
+                                    <tr>
+                                        <th>Detalhes</th>
+                                        <th>Guia</th>
+                                        <th>Data IH</th>
+                                        <th>Data da Alta</th>
+                                        <th>Motivo da Alta</th>
+                                        <th>Hospital Destino</th>
+                                        <th>Natureza da Guia</th>
+                                        <th>Status da Guia</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {patientAdmissions.length > 0 ? (
+                                        patientAdmissions.map((admission) => (
+                                            <tr key={admission.guia} className={admission.id === patient.id ? 'current-admission-row' : ''}>
+                                                <td>
+                                                    <button
+                                                        className="icon-button"
+                                                        onClick={() => onSelectPatient(admission)}
+                                                        aria-label={`Acessar detalhes da guia ${admission.guia}`}
+                                                        title="Acessar Guia"
+                                                        disabled={admission.id === patient.id}
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                                    </button>
+                                                </td>
+                                                <td>{admission.guia}</td>
+                                                <td>{formatDateDdMmYy(admission.dataIH)}</td>
+                                                <td>{formatDateDdMmYy(admission.altaFim)}</td>
+                                                <td>{admission.motivoAlta || 'N/A'}</td>
+                                                <td>{admission.hospitalDestino}</td>
+                                                <td>{admission.natureza}</td>
+                                                <td>
+                                                    <span className={`status-badge ${statusToClassName(admission.status)}`}>
+                                                        {admission.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={8} style={{ textAlign: 'center' }}>Nenhum histórico de internação encontrado.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </fieldset>
+                );
+            case 'historicoAlteracoes':
                 return (
                     <>
                         <fieldset>
-                            <legend>Histórico de internação</legend>
+                            <legend>Histórico de Alterações / Anotações</legend>
                             <table className="history-table">
                                 <thead>
                                     <tr>
@@ -468,7 +545,7 @@ const PatientDetails = ({ patient: initialPatient, onBack, user, onSavePatient, 
                                             </div>
                                         </div>
                                     </div>
-                                    <button type="submit" className="add-history-btn">Adicionar Histórico</button>
+                                    <button type="submit" className="add-history-btn">Adicionar Anotação</button>
                                 </form>
                             </fieldset>
                         )}
@@ -528,6 +605,17 @@ const PatientDetails = ({ patient: initialPatient, onBack, user, onSavePatient, 
                             <div className="form-group">
                                 <label>Nível de Criticidade</label>
                                 <div className="radio-group-horizontal">
+                                    <label>
+                                        <input
+                                            type="radio"
+                                            name="criticidade"
+                                            value="Revisão Padrão"
+                                            checked={patient.criticidade === 'Revisão Padrão'}
+                                            onChange={handleInputChange}
+                                            disabled={user.role !== 'admin'}
+                                        />
+                                        Revisão Padrão
+                                    </label>
                                     <label>
                                         <input
                                             type="radio"
@@ -592,8 +680,8 @@ const PatientDetails = ({ patient: initialPatient, onBack, user, onSavePatient, 
     return (
         <div className="page-container">
             <AppHeader
-                title={`Detalhes do Paciente`}
-                subtitle={`${patient.nome} • ${patient.permanencia}`}
+                title={`Detalhes da Guia`}
+                subtitle={`${patient.nome} • Guia: ${patient.guia}`}
                 onBack={onBack}
             />
 

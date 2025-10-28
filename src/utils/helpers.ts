@@ -106,13 +106,32 @@ const fieldLabels: Partial<Record<keyof Patient, string>> = {
     hospitalDestino: 'Hospital de Destino',
     leitoAdmissao: 'Leito Admissional',
     leitoAuditado: 'Leito Auditado',
+    leitoHoje: 'Leito Hoje',
     evento: 'Evento',
     reinternacao: 'Reinternação',
     liminar: 'Liminar',
     fraude: 'Fraude',
     enviadoRetificacao: 'Enviado para Retificação',
     tipoReinternacao: 'Tipo Reinternação',
-    taskStatus: 'Status da Tarefa',
+    diagnosticos: 'Diagnósticos',
+    produto: 'Produto',
+    carencia: 'Carência',
+    cpt: 'CPT',
+    cidIH: 'CID de Entrada',
+    cidEvolutivo: 'CID Evolutivo',
+    cidAlta: 'CID Alta',
+    medico: 'Nome do Médico',
+    telefone: 'Telefone',
+    ultimaConsulta: 'Última consulta',
+    notasRegulacao: 'Notas da Regulação',
+    tipoCirurgia: 'Tipo de Cirurgia',
+    desdeCirurgia: 'Aguardando Cirurgia Desde',
+    aguardandoExame: 'Aguardando Exame',
+    desdeExame: 'Aguardando Exame Desde',
+    aguardandoParecer: 'Aguardando Parecer',
+    desdeParecer: 'Aguardando Parecer Desde',
+    aguardandoDesospitalizacao: 'Aguardando Desospitalização',
+    desdeDesospitalizacao: 'Aguardando Desospitalização Desde',
 };
 
 const formatDateForHistory = (dateStr: string | undefined) => {
@@ -134,7 +153,7 @@ export const generateChangeHistory = (original: Patient, updated: Patient, user:
             let from = originalValue || 'vazio';
             let to = updatedValue || 'vazio';
 
-            if (['altaPrev', 'altaReplan', 'altaFim'].includes(key)) {
+            if (['altaPrev', 'altaReplan', 'altaFim', 'desdeCirurgia', 'desdeExame', 'desdeParecer', 'desdeDesospitalizacao', 'ultimaConsulta'].includes(key)) {
                 from = formatDateForHistory(originalValue as string | undefined);
                 to = formatDateForHistory(updatedValue as string | undefined);
             }
@@ -170,6 +189,42 @@ export const generateChangeHistory = (original: Patient, updated: Patient, user:
             });
         }
     }
+    
+    // Special handling for 'leitoHistory' array
+    const originalLeitoHistory = original.leitoHistory || [];
+    const updatedLeitoHistory = updated.leitoHistory || [];
+
+    // Check for added or modified records
+    updatedLeitoHistory.forEach(updatedRecord => {
+        const originalRecord = originalLeitoHistory.find(r => r.id === updatedRecord.id);
+        if (!originalRecord) {
+            changes.push({
+                data: today,
+                responsavel: user.name,
+                diario: `Log de Leito: Adicionado registro para data ${formatDateDdMmYy(updatedRecord.date)} com leito '${updatedRecord.leitoDoDia}'.`
+            });
+        } else {
+            if (originalRecord.leitoDoDia !== updatedRecord.leitoDoDia) {
+                changes.push({
+                    data: today,
+                    responsavel: user.name,
+                    diario: `Log de Leito: Leito do dia para data ${formatDateDdMmYy(updatedRecord.date)} alterado de '${originalRecord.leitoDoDia}' para '${updatedRecord.leitoDoDia}'.`
+                });
+            }
+        }
+    });
+
+    // Check for deleted records
+    originalLeitoHistory.forEach(originalRecord => {
+        const stillExists = updatedLeitoHistory.some(r => r.id === originalRecord.id);
+        if (!stillExists) {
+             changes.push({
+                data: today,
+                responsavel: user.name,
+                diario: `Log de Leito: Removido registro para data ${formatDateDdMmYy(originalRecord.date)} com leito '${originalRecord.leitoDoDia}'.`
+            });
+        }
+    });
 
     return changes;
 };

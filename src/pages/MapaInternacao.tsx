@@ -22,11 +22,13 @@ const motivoAltaOptions = [
 ];
 
 const criticidadeDisplayMap: { [key in Patient['criticidade']]: string } = {
+    'Revisão Padrão': '0',
     'Diário 24h': '1',
     '48h': '2',
     '72h': '3',
 };
 const criticidadeValueMap: { [key: string]: Patient['criticidade'] } = {
+    '0': 'Revisão Padrão',
     '1': 'Diário 24h',
     '2': '48h',
     '3': '72h',
@@ -82,30 +84,30 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
     // Applied filters
     const [dateFilter, setDateFilter] = useState<string>('');
     const [hospitalFilter, setHospitalFilter] = useState<string[]>([]);
-    const [taskStatusFilter, setTaskStatusFilter] = useState<NonNullable<Patient['taskStatus']>[]>([]);
     const [guiaStatusFilter, setGuiaStatusFilter] = useState<GuiaStatus[]>([]);
     const [patientStatusFilter, setPatientStatusFilter] = useState<'Internados' | 'Com Alta'>('Internados');
+    const [statusFilter, setStatusFilter] = useState<'Todos' | 'Auditado' | 'Em Fila'>('Todos');
+    const [altaReplanFilter, setAltaReplanFilter] = useState<'Todos' | 'Atrasado' | 'Sem atraso'>('Todos');
+    const [nameSearch, setNameSearch] = useState('');
 
 
     // Temporary filters for UI
     const [tempDateFilter, setTempDateFilter] = useState(dateFilter);
     const [tempHospitalFilter, setTempHospitalFilter] = useState(hospitalFilter);
-    const [tempTaskStatusFilter, setTempTaskStatusFilter] = useState(taskStatusFilter);
     const [tempGuiaStatusFilter, setTempGuiaStatusFilter] = useState(guiaStatusFilter);
     const [tempPatientStatusFilter, setTempPatientStatusFilter] = useState(patientStatusFilter);
+    const [tempStatusFilter, setTempStatusFilter] = useState(statusFilter);
+    const [tempAltaReplanFilter, setTempAltaReplanFilter] = useState(altaReplanFilter);
 
     
     // Dropdown visibility
     const [isHospitalDropdownOpen, setIsHospitalDropdownOpen] = useState(false);
     const [isGuiaDropdownOpen, setIsGuiaDropdownOpen] = useState(false);
-    const [isTarefaDropdownOpen, setIsTarefaDropdownOpen] = useState(false);
 
     const hospitalDropdownRef = useRef<HTMLDivElement>(null);
     const guiaDropdownRef = useRef<HTMLDivElement>(null);
-    const tarefaDropdownRef = useRef<HTMLDivElement>(null);
 
     const uniqueHospitals = useMemo(() => [...new Set(patients.map(p => p.hospitalDestino))], [patients]);
-    const taskStatuses: NonNullable<Patient['taskStatus']>[] = ['Atrasado', 'Auditados', 'Em Fila'];
     const guiaStatuses: GuiaStatus[] = [
         'Guia emitida / liberada', 'Guia negada', 'Guia cancelada', 'Guia sob auditoria',
         'Guia parcialmente liberada', 'Guia aguardando autorização', 'Guia pedido/aguard confirmação',
@@ -120,9 +122,6 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
             if (hospitalDropdownRef.current && !hospitalDropdownRef.current.contains(event.target as Node)) {
                 setIsHospitalDropdownOpen(false);
             }
-            if (tarefaDropdownRef.current && !tarefaDropdownRef.current.contains(event.target as Node)) {
-                setIsTarefaDropdownOpen(false);
-            }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => {
@@ -132,6 +131,7 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
 
     const reviewStats = useMemo(() => {
         const stats = {
+            padrao: { total: 0, emFila: 0, auditados: 0, altaReplan: 0 },
             daily: { total: 0, emFila: 0, auditados: 0, altaReplan: 0 },
             h48: { total: 0, emFila: 0, auditados: 0, altaReplan: 0 },
             h72: { total: 0, emFila: 0, auditados: 0, altaReplan: 0 },
@@ -139,18 +139,22 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
 
         patients.forEach(p => {
             let category: keyof typeof stats | null = null;
-            if (p.criticidade === 'Diário 24h') category = 'daily';
+            if (p.criticidade === 'Revisão Padrão') category = 'padrao';
+            else if (p.criticidade === 'Diário 24h') category = 'daily';
             else if (p.criticidade === '48h') category = 'h48';
             else if (p.criticidade === '72h') category = 'h72';
 
             if (category) {
-                if (p.status === 'Guia sob auditoria') {
+                const isAuditado = !!p.leitoAuditado;
+                const isAtrasado = !!p.altaReplan;
+
+                if (isAuditado) {
                     stats[category].auditados++;
                 } else {
                     stats[category].emFila++;
                 }
-
-                if (p.altaReplan && p.altaReplan.trim() !== '' && p.taskStatus === 'Atrasado') {
+                
+                if (isAtrasado) {
                     stats[category].altaReplan++;
                 }
             }
@@ -170,11 +174,21 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                 const criticidadeMatch = !criticidadeFilter || criticidadeFilter.includes(p.criticidade);
                 const dateMatch = !dateFilter || p.dataIH === dateFilter;
                 const hospitalMatch = hospitalFilter.length === 0 || hospitalFilter.includes(p.hospitalDestino);
-                const taskStatusMatch = taskStatusFilter.length === 0 || (p.taskStatus && taskStatusFilter.includes(p.taskStatus));
                 const guiaStatusMatch = guiaStatusFilter.length === 0 || guiaStatusFilter.includes(p.status);
                 const patientStatusMatch = patientStatusFilter === 'Internados' ? !p.altaFim : !!p.altaFim;
+                
+                const isAtrasado = !!p.altaReplan;
+                const isAuditado = !!p.leitoAuditado;
+                const primaryStatus = isAuditado ? 'Auditado' : 'Em Fila';
 
-                return criticidadeMatch && dateMatch && hospitalMatch && taskStatusMatch && guiaStatusMatch && patientStatusMatch;
+                const statusMatch = statusFilter === 'Todos' || primaryStatus === statusFilter;
+                const altaReplanMatch = altaReplanFilter === 'Todos' ||
+                    (altaReplanFilter === 'Atrasado' && isAtrasado) ||
+                    (altaReplanFilter === 'Sem atraso' && !isAtrasado);
+                
+                const nameMatch = nameSearch === '' || p.nome.toLowerCase().includes(nameSearch.toLowerCase());
+
+                return criticidadeMatch && dateMatch && hospitalMatch && guiaStatusMatch && patientStatusMatch && statusMatch && altaReplanMatch && nameMatch;
             })
             .sort((a, b) => {
                 const priority: { [key in GuiaStatus]?: number } = { 
@@ -187,7 +201,7 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                 if (aPrio > bPrio) return 1;
                 return 0;
             });
-    }, [patients, criticidadeFilter, dateFilter, hospitalFilter, taskStatusFilter, guiaStatusFilter, patientStatusFilter]);
+    }, [patients, criticidadeFilter, dateFilter, hospitalFilter, guiaStatusFilter, patientStatusFilter, statusFilter, altaReplanFilter, nameSearch]);
 
     const handleSelectReview = (criticidade: Patient['criticidade'][]) => {
         if (JSON.stringify(criticidadeFilter) === JSON.stringify(criticidade)) {
@@ -260,45 +274,31 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
             [patientId]: { ...prev[patientId], criticidade: newCriticidade }
         }));
     };
-
-    const handleTaskStatusChange = (patientId: number) => {
-        const originalPatient = patients.find(p => p.id === patientId);
-        if (!originalPatient) return;
-
-        const currentData = { ...originalPatient, ...(editedPatients[patientId] || {}) };
-
-        let nextStatus: Patient['taskStatus'];
-        switch (currentData.taskStatus) {
-            case 'Atrasado': nextStatus = 'Auditados'; break;
-            case 'Auditados': nextStatus = 'Em Fila'; break;
-            case 'Em Fila': default: nextStatus = 'Atrasado'; break;
-        }
-        setEditedPatients(prev => ({
-            ...prev,
-            [patientId]: { ...prev[patientId], taskStatus: nextStatus }
-        }));
-    };
     
     const handleApplyFilters = () => {
         setDateFilter(tempDateFilter);
         setHospitalFilter(tempHospitalFilter);
         setGuiaStatusFilter(tempGuiaStatusFilter);
-        setTaskStatusFilter(tempTaskStatusFilter);
         setPatientStatusFilter(tempPatientStatusFilter);
+        setStatusFilter(tempStatusFilter);
+        setAltaReplanFilter(tempAltaReplanFilter);
     };
     
     const handleClearFilters = () => {
         setTempDateFilter('');
         setTempHospitalFilter([]);
         setTempGuiaStatusFilter([]);
-        setTempTaskStatusFilter([]);
         setTempPatientStatusFilter('Internados');
+        setTempStatusFilter('Todos');
+        setTempAltaReplanFilter('Todos');
         
         setDateFilter('');
         setHospitalFilter([]);
         setGuiaStatusFilter([]);
-        setTaskStatusFilter([]);
         setPatientStatusFilter('Internados');
+        setStatusFilter('Todos');
+        setAltaReplanFilter('Todos');
+        setNameSearch('');
     };
     
     const handleHospitalMultiChange = (hospital: string) => {
@@ -315,13 +315,6 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
         });
     };
     
-    const handleTaskStatusMultiChange = (status: NonNullable<Patient['taskStatus']>) => {
-        setTempTaskStatusFilter(prev => {
-            const isSelected = prev.includes(status);
-            return isSelected ? prev.filter(s => s !== status) : [...prev, status];
-        });
-    };
-
     const handleSaveAllChanges = () => {
         let validationFailed = false;
 
@@ -380,7 +373,7 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                 </div>
                 <div className="sub-count-item">
                     <span className="sub-count-number alta-replan">{subCounts.altaReplan}</span>
-                    <span className="sub-count-label">Alta Replanejada</span>
+                    <span className="sub-count-label">Alta Replan</span>
                 </div>
             </div>
             <button className="review-card-button" onClick={onClick}>
@@ -397,6 +390,14 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                 onBack={onBack}
             />
             <div className="review-cards-container">
+                 <ReviewCard 
+                    title="Revisão Padrão" 
+                    badgeText="Criticidade 0" 
+                    totalCount={reviewStats.padrao.total}
+                    subCounts={reviewStats.padrao}
+                    theme="purple" 
+                    onClick={() => handleSelectReview(['Revisão Padrão'])} 
+                 />
                  <ReviewCard 
                     title="Revisão diária 24h" 
                     badgeText="Criticidade 1" 
@@ -423,75 +424,88 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                  />
             </div>
 
-            <div className="filter-bar" style={{ marginTop: '24px', marginBottom: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, borderBottom: '1px solid var(--border-color)' }}>
-                <div className="filter-controls">
-                     <div className="form-group">
-                        <label>Status do Paciente:</label>
-                        <select value={tempPatientStatusFilter} onChange={(e) => setTempPatientStatusFilter(e.target.value as any)}>
-                            <option value="Internados">Internados</option>
-                            <option value="Com Alta">Com Alta</option>
-                        </select>
-                    </div>
-                    <div className="form-group">
-                        <label>Portal do tempo (Data IH):</label>
-                        <input type="date" value={tempDateFilter} onChange={(e) => setTempDateFilter(e.target.value)} />
-                    </div>
-                    <div className="form-group" ref={hospitalDropdownRef}>
-                        <label>Hosp. Destino:</label>
-                        <div className="multi-select-dropdown">
-                            <button type="button" className="multi-select-dropdown-button" onClick={() => setIsHospitalDropdownOpen(prev => !prev)}>
-                                {tempHospitalFilter.length === 0 ? 'Todos' : tempHospitalFilter.length === 1 ? tempHospitalFilter[0] : `${tempHospitalFilter.length} selecionados`}
-                            </button>
-                            {isHospitalDropdownOpen && (
-                                <div className="multi-select-dropdown-menu">
-                                    {uniqueHospitals.map(h => (
-                                        <label key={h} className="multi-select-dropdown-item">
-                                            <input type="checkbox" checked={tempHospitalFilter.includes(h)} onChange={() => handleHospitalMultiChange(h)} /> {h}
-                                        </label>
-                                    ))}
-                                </div>
-                            )}
+            <div className="filter-bar" style={{ marginTop: '20px', marginBottom: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, borderBottom: '1px solid var(--border-color)', flexDirection: 'column', alignItems: 'stretch', gap: '16px'}}>
+                <div style={{display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '20px'}}>
+                    <div className="filter-controls">
+                         <div className="form-group">
+                            <label>Status do Paciente:</label>
+                            <select value={tempPatientStatusFilter} onChange={(e) => setTempPatientStatusFilter(e.target.value as any)}>
+                                <option value="Internados">Internados</option>
+                                <option value="Com Alta">Com Alta</option>
+                            </select>
+                        </div>
+                        <div className="form-group">
+                            <label>Portal do tempo (Data IH):</label>
+                            <input type="date" value={tempDateFilter} onChange={(e) => setTempDateFilter(e.target.value)} />
+                        </div>
+                        <div className="form-group" ref={hospitalDropdownRef}>
+                            <label>Hosp. Destino:</label>
+                            <div className="multi-select-dropdown">
+                                <button type="button" className="multi-select-dropdown-button" onClick={() => setIsHospitalDropdownOpen(prev => !prev)}>
+                                    {tempHospitalFilter.length === 0 ? 'Todos' : tempHospitalFilter.length === 1 ? tempHospitalFilter[0] : `${tempHospitalFilter.length} selecionados`}
+                                </button>
+                                {isHospitalDropdownOpen && (
+                                    <div className="multi-select-dropdown-menu">
+                                        {uniqueHospitals.map(h => (
+                                            <label key={h} className="multi-select-dropdown-item">
+                                                <input type="checkbox" checked={tempHospitalFilter.includes(h)} onChange={() => handleHospitalMultiChange(h)} /> {h}
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="form-group" ref={guiaDropdownRef}>
+                            <label>Status da Guia:</label>
+                            <div className="multi-select-dropdown">
+                                <button type="button" className="multi-select-dropdown-button" onClick={() => setIsGuiaDropdownOpen(prev => !prev)}>
+                                    {tempGuiaStatusFilter.length === 0 ? 'Todos' : tempGuiaStatusFilter.length === 1 ? tempGuiaStatusFilter[0] : `${tempGuiaStatusFilter.length} selecionados`}
+                                </button>
+                                {isGuiaDropdownOpen && (
+                                    <div className="multi-select-dropdown-menu">
+                                        {guiaStatuses.map(s => (
+                                            <label key={s} className="multi-select-dropdown-item">
+                                                <input type="checkbox" checked={tempGuiaStatusFilter.includes(s)} onChange={() => handleGuiaStatusMultiChange(s)} /> {s}
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="form-group">
+                            <label>Status:</label>
+                            <select value={tempStatusFilter} onChange={(e) => setTempStatusFilter(e.target.value as any)}>
+                                <option value="Todos">Todos</option>
+                                <option value="Auditado">Auditado</option>
+                                <option value="Em Fila">Em Fila</option>
+                            </select>
+                        </div>
+                         <div className="form-group">
+                            <label>Alta Replan:</label>
+                            <select value={tempAltaReplanFilter} onChange={(e) => setTempAltaReplanFilter(e.target.value as any)}>
+                                <option value="Todos">Todos</option>
+                                <option value="Atrasado">Atrasado</option>
+                                <option value="Sem atraso">Sem atraso</option>
+                            </select>
                         </div>
                     </div>
-                    <div className="form-group" ref={guiaDropdownRef}>
-                        <label>Status da Guia:</label>
-                        <div className="multi-select-dropdown">
-                            <button type="button" className="multi-select-dropdown-button" onClick={() => setIsGuiaDropdownOpen(prev => !prev)}>
-                                {tempGuiaStatusFilter.length === 0 ? 'Todos' : tempGuiaStatusFilter.length === 1 ? tempGuiaStatusFilter[0] : `${tempGuiaStatusFilter.length} selecionados`}
-                            </button>
-                            {isGuiaDropdownOpen && (
-                                <div className="multi-select-dropdown-menu">
-                                    {guiaStatuses.map(s => (
-                                        <label key={s} className="multi-select-dropdown-item">
-                                            <input type="checkbox" checked={tempGuiaStatusFilter.includes(s)} onChange={() => handleGuiaStatusMultiChange(s)} /> {s}
-                                        </label>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    <div className="form-group" ref={tarefaDropdownRef}>
-                        <label>Status:</label>
-                        <div className="multi-select-dropdown">
-                            <button type="button" className="multi-select-dropdown-button" onClick={() => setIsTarefaDropdownOpen(prev => !prev)}>
-                                {tempTaskStatusFilter.length === 0 ? 'Todos' : tempTaskStatusFilter.length === 1 ? tempTaskStatusFilter[0] : `${tempTaskStatusFilter.length} selecionados`}
-                            </button>
-                            {isTarefaDropdownOpen && (
-                                <div className="multi-select-dropdown-menu">
-                                    {taskStatuses.map(s => (
-                                        <label key={s} className="multi-select-dropdown-item">
-                                            <input type="checkbox" checked={tempTaskStatusFilter.includes(s)} onChange={() => handleTaskStatusMultiChange(s)} /> {s}
-                                        </label>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                    <div className="filter-actions">
+                        <button onClick={handleClearFilters} className="secondary-action-button">Limpar</button>
+                        <button onClick={handleApplyFilters} className="save-button">Aplicar Filtros</button>
+                        <button onClick={handleSaveAllChanges} className="save-button" disabled={Object.keys(editedPatients).length === 0}>Salvar Alterações</button>
                     </div>
                 </div>
-                <div className="filter-actions">
-                    <button onClick={handleClearFilters} className="secondary-action-button">Limpar</button>
-                    <button onClick={handleApplyFilters} className="save-button">Aplicar Filtros</button>
-                    <button onClick={handleSaveAllChanges} className="save-button" disabled={Object.keys(editedPatients).length === 0}>Salvar Alterações</button>
+                 <div>
+                    <div className="form-group">
+                        <label>Buscar por Nome:</label>
+                        <input
+                            type="text"
+                            placeholder="Digite o nome do paciente (busca automática)"
+                            value={nameSearch}
+                            onChange={(e) => setNameSearch(e.target.value)}
+                            style={{width: '100%'}}
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -518,6 +532,18 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                         {filteredPatients.map(p => {
                             const editedData = editedPatients[p.id] || {};
                             const patientData = { ...p, ...editedData };
+                            
+                            const isAtrasado = !!patientData.altaReplan;
+                            let statusText: 'Atrasado' | 'Auditado' | 'Em Fila';
+                            let badgeClass: string;
+
+                            if (isAtrasado) {
+                                statusText = 'Atrasado';
+                                badgeClass = 'atrasado';
+                            } else {
+                                statusText = patientData.leitoAuditado ? 'Auditado' : 'Em Fila';
+                                badgeClass = statusText.toLowerCase().replace(' ', '-');
+                            }
 
                             const latestLeitoRecord = [...(patientData.leitoHistory || [])]
                                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
@@ -580,9 +606,10 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                                             className="table-select"
                                             value={criticidadeDisplayMap[patientData.criticidade]}
                                             onChange={(e) => handleCriticidadeChange(p.id, e.target.value)}
-                                            style={{ color: 'var(--status-red-text)', fontWeight: 'bold' }}
+                                            style={patientData.criticidade === 'Revisão Padrão' ? {} : { color: 'var(--status-red-text)', fontWeight: 'bold' }}
                                             disabled={user.role !== 'admin'}
                                         >
+                                            <option value="0">0</option>
                                             <option value="1">1</option>
                                             <option value="2">2</option>
                                             <option value="3">3</option>
@@ -597,14 +624,9 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                                     <td>{patientData.natureza}</td>
                                     <td><span className={`status-badge ${statusToClassName(patientData.status)}`}>{patientData.status}</span></td>
                                     <td>
-                                        <button
-                                            className={`task-status-badge ${patientData.taskStatus?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(' ', '-') || ''}`}
-                                            onClick={() => user.role === 'admin' && handleTaskStatusChange(p.id)}
-                                            disabled={user.role !== 'admin'}
-                                            aria-label={`Status da tarefa: ${patientData.taskStatus}. ${user.role === 'admin' ? 'Clique para alterar.' : ''}`}
-                                        >
-                                            {patientData.taskStatus || 'N/A'}
-                                        </button>
+                                        <span className={`task-status-badge ${badgeClass}`}>
+                                            {statusText}
+                                        </span>
                                     </td>
                                 </tr>
                             );

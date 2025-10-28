@@ -57,7 +57,7 @@ const App = () => {
         const currentPatientData = patients.find(p => p.id === patient.id) || patient;
         setSelectedPatient(currentPatientData);
         setPreviousPage(currentPage);
-        setCurrentPage('Detalhes do Paciente');
+        setCurrentPage('Detalhes da Guia');
     };
     
     const handleBackToMenu = () => {
@@ -161,13 +161,15 @@ const App = () => {
         
         const pageInfo = menuItems.find(item => item.page === currentPage);
 
-        if (selectedPatient && currentPage === 'Detalhes do Paciente') {
+        if (selectedPatient && currentPage === 'Detalhes da Guia') {
             return <PatientDetails 
                         patient={selectedPatient} 
+                        allPatients={patients}
                         onBack={handleBackFromDetails} 
                         user={user}
                         onSavePatient={handleUpdatePatient}
                         showToast={showToast}
+                        onSelectPatient={handleSelectPatient}
                     />;
         }
 

@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'https://aistudiocdn.com/react@^19.2.0';
 import { Patient, User, GuiaStatus, HistoryEntry } from '../types';
-import AppHeader from '../components/AppHeader';
-import { formatDateDdMmYy, calculatePermanencia, formatDateTimeDdMmYy } from '../utils/helpers';
-import GestaoDeLeito from '../components/GestaoDeLeito';
+import AppHeader from '../components/AppHeader.tsx';
+import { formatDateDdMmYy, calculatePermanencia, formatDateTimeDdMmYy } from '../utils/helpers.ts';
+import GestaoDeLeito from '../components/GestaoDeLeito.tsx';
 
 const statusToClassName = (status: GuiaStatus) => {
     return status
@@ -22,11 +22,13 @@ const motivoAltaOptions = [
 ];
 
 const criticidadeDisplayMap: { [key in Patient['criticidade']]: string } = {
+    'Revisão Padrão': '0',
     'Diário 24h': '1',
     '48h': '2',
     '72h': '3',
 };
 const criticidadeValueMap: { [key: string]: Patient['criticidade'] } = {
+    '0': 'Revisão Padrão',
     '1': 'Diário 24h',
     '2': '48h',
     '3': '72h',
@@ -75,12 +77,11 @@ const FotoDoDia = ({ onBack, onBackToCards, onSelectPatient, user, patients, onU
 }) => {
     const [dateFilter, setDateFilter] = useState<string>('2025-08-24');
     const [hospitalFilter, setHospitalFilter] = useState<string>('Todos');
-    const [taskStatusFilter, setTaskStatusFilter] = useState<string>('Todos');
+    const [statusFilter, setStatusFilter] = useState<'Todos' | 'Auditado' | 'Em Fila'>('Todos');
+    const [altaReplanFilter, setAltaReplanFilter] = useState<'Todos' | 'Atrasado' | 'Sem atraso'>('Todos');
     const [editingLeitoPatient, setEditingLeitoPatient] = useState<Patient | null>(null);
 
     const uniqueHospitals = useMemo(() => ['Todos', ...new Set(patients.map(p => p.hospitalDestino))], [patients]);
-    const taskStatuses: (Patient['taskStatus'] | undefined)[] = ['Atrasado', 'Auditados', 'Em Fila'];
-
 
     const filteredPatients = useMemo(() => {
         return patients
@@ -88,8 +89,17 @@ const FotoDoDia = ({ onBack, onBackToCards, onSelectPatient, user, patients, onU
                 const dateMatch = !dateFilter || p.data === dateFilter;
                 const hospitalMatch = hospitalFilter === 'Todos' || p.hospitalDestino === hospitalFilter;
                 const criticidadeMatch = !initialCriticidadeFilter || initialCriticidadeFilter.includes(p.criticidade);
-                const taskStatusMatch = taskStatusFilter === 'Todos' || p.taskStatus === taskStatusFilter;
-                return dateMatch && hospitalMatch && criticidadeMatch && taskStatusMatch;
+                
+                const isAtrasado = !!p.altaReplan;
+                const isAuditado = !!p.leitoAuditado;
+                const primaryStatus = isAuditado ? 'Auditado' : 'Em Fila';
+
+                const statusMatch = statusFilter === 'Todos' || primaryStatus === statusFilter;
+                const altaReplanMatch = altaReplanFilter === 'Todos' ||
+                    (altaReplanFilter === 'Atrasado' && isAtrasado) ||
+                    (altaReplanFilter === 'Sem atraso' && !isAtrasado);
+                    
+                return dateMatch && hospitalMatch && criticidadeMatch && statusMatch && altaReplanMatch;
             })
             .sort((a, b) => {
                 const priority: { [key in GuiaStatus]?: number } = { 
@@ -102,7 +112,7 @@ const FotoDoDia = ({ onBack, onBackToCards, onSelectPatient, user, patients, onU
                 if (aPrio > bPrio) return 1;
                 return 0;
             });
-    }, [patients, dateFilter, hospitalFilter, initialCriticidadeFilter, taskStatusFilter]);
+    }, [patients, dateFilter, hospitalFilter, initialCriticidadeFilter, statusFilter, altaReplanFilter]);
     
     const handleSaveLeito = (updatedPatient: Patient) => {
         const originalPatient = patients.find(p => p.id === updatedPatient.id);
@@ -177,31 +187,6 @@ const FotoDoDia = ({ onBack, onBackToCards, onSelectPatient, user, patients, onU
         );
     };
 
-    const handleTaskStatusChange = (patientId: number) => {
-        onUpdatePatients(prevPatients => 
-            prevPatients.map(p => {
-                if (p.id === patientId) {
-                    let nextStatus: Patient['taskStatus'];
-                    switch (p.taskStatus) {
-                        case 'Atrasado':
-                            nextStatus = 'Auditados';
-                            break;
-                        case 'Auditados':
-                            nextStatus = 'Em Fila';
-                            break;
-                        case 'Em Fila':
-                        default:
-                            nextStatus = 'Atrasado';
-                            break;
-                    }
-                    return { ...p, taskStatus: nextStatus };
-                }
-                return p;
-            })
-        );
-    };
-
-
     return (
         <div className="page-container">
             <AppHeader
@@ -210,22 +195,33 @@ const FotoDoDia = ({ onBack, onBackToCards, onSelectPatient, user, patients, onU
                 onBack={onBack}
             />
             <div className="filter-bar">
-                <div className="form-group">
-                    <label>Portal do tempo:</label>
-                    <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} />
-                </div>
-                <div className="form-group">
-                     <label>Hosp.Destino:</label>
-                     <select value={hospitalFilter} onChange={(e) => setHospitalFilter(e.target.value)}>
-                        {uniqueHospitals.map(h => <option key={h} value={h}>{h}</option>)}
-                     </select>
-                </div>
-                <div className="form-group">
-                    <label>Status:</label>
-                    <select value={taskStatusFilter} onChange={(e) => setTaskStatusFilter(e.target.value)}>
-                        <option value="Todos">Todos</option>
-                        {taskStatuses.map(s => s && <option key={s} value={s}>{s}</option>)}
-                    </select>
+                <div className="filter-controls">
+                    <div className="form-group">
+                        <label>Portal do tempo:</label>
+                        <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} />
+                    </div>
+                    <div className="form-group">
+                         <label>Hosp.Destino:</label>
+                         <select value={hospitalFilter} onChange={(e) => setHospitalFilter(e.target.value)}>
+                            {uniqueHospitals.map(h => <option key={h} value={h}>{h}</option>)}
+                         </select>
+                    </div>
+                    <div className="form-group">
+                        <label>Status:</label>
+                        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}>
+                            <option value="Todos">Todos</option>
+                            <option value="Auditado">Auditado</option>
+                            <option value="Em Fila">Em Fila</option>
+                        </select>
+                    </div>
+                    <div className="form-group">
+                        <label>Alta Replan:</label>
+                        <select value={altaReplanFilter} onChange={(e) => setAltaReplanFilter(e.target.value as any)}>
+                            <option value="Todos">Todos</option>
+                            <option value="Atrasado">Atrasado</option>
+                            <option value="Sem atraso">Sem atraso</option>
+                        </select>
+                    </div>
                 </div>
                 <button onClick={onBackToCards} className="secondary-action-button">Voltar ao Painel</button>
             </div>
@@ -256,6 +252,18 @@ const FotoDoDia = ({ onBack, onBackToCards, onSelectPatient, user, patients, onU
                             const latestLeitoRecord = [...(p.leitoHistory || [])]
                                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
                             const leitoDoDia = latestLeitoRecord ? latestLeitoRecord.leitoDoDia : p.leitoAdmissao;
+                            
+                            const isAtrasado = !!p.altaReplan;
+                            let statusText: 'Atrasado' | 'Auditado' | 'Em Fila';
+                            let badgeClass: string;
+
+                            if (isAtrasado) {
+                                statusText = 'Atrasado';
+                                badgeClass = 'atrasado';
+                            } else {
+                                statusText = p.leitoAuditado ? 'Auditado' : 'Em Fila';
+                                badgeClass = statusText.toLowerCase().replace(' ', '-');
+                            }
                             
                             return (
                                 <tr key={p.id}>
@@ -314,9 +322,10 @@ const FotoDoDia = ({ onBack, onBackToCards, onSelectPatient, user, patients, onU
                                             className="table-select"
                                             value={criticidadeDisplayMap[p.criticidade]}
                                             onChange={(e) => handleCriticidadeChange(p.id, e.target.value)}
-                                            style={{ color: 'var(--status-red-text)', fontWeight: 'bold' }}
+                                            style={p.criticidade === 'Revisão Padrão' ? {} : { color: 'var(--status-red-text)', fontWeight: 'bold' }}
                                             disabled={user.role !== 'admin'}
                                         >
+                                            <option value="0">0</option>
                                             <option value="1">1</option>
                                             <option value="2">2</option>
                                             <option value="3">3</option>
@@ -331,14 +340,9 @@ const FotoDoDia = ({ onBack, onBackToCards, onSelectPatient, user, patients, onU
                                     <td>{p.natureza}</td>
                                     <td><span className={`status-badge ${statusToClassName(p.status)}`}>{p.status}</span></td>
                                     <td>
-                                        <button
-                                            className={`task-status-badge ${p.taskStatus?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(' ', '-') || ''}`}
-                                            onClick={() => user.role === 'admin' && handleTaskStatusChange(p.id)}
-                                            disabled={user.role !== 'admin'}
-                                            aria-label={`Status da tarefa: ${p.taskStatus}. ${user.role === 'admin' ? 'Clique para alterar.' : ''}`}
-                                        >
-                                            {p.taskStatus || 'N/A'}
-                                        </button>
+                                        <span className={`task-status-badge ${badgeClass}`}>
+                                            {statusText}
+                                        </span>
                                     </td>
                                 </tr>
                             );

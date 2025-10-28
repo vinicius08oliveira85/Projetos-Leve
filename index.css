@@ -400,6 +400,14 @@ body {
 .theme-green .review-card-badge { background-color: var(--success-color); }
 .theme-green .review-card-button { background-color: var(--success-color); }
 
+.theme-purple {
+    background-color: var(--status-purple);
+    border-color: #CE93D8;
+}
+.theme-purple .review-card-badge { background-color: var(--status-purple-text); }
+.theme-purple .review-card-button { background-color: var(--status-purple-text); }
+
+
 /* --- Foto do Dia --- */
 .filter-bar {
     display: flex;
@@ -572,6 +580,12 @@ body {
     cursor: pointer;
     color: var(--primary-color);
 }
+.icon-button:disabled {
+    color: var(--light-text-color);
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
 .status-badge {
     padding: 6px 12px;
     border-radius: 16px;
@@ -605,7 +619,7 @@ body {
     opacity: 0.7;
 }
 .task-status-badge.atrasado { background-color: var(--status-red); color: var(--status-red-text); }
-.task-status-badge.auditados { background-color: var(--status-yellow); color: var(--status-yellow-text); }
+.task-status-badge.auditado { background-color: var(--status-yellow); color: var(--status-yellow-text); }
 .task-status-badge.em-fila { background-color: var(--status-green); color: var(--status-green-text); }
 
 
@@ -785,6 +799,14 @@ legend {
     border-bottom: 1px solid #f0f0f0;
 }
 .history-table th { font-weight: 500; }
+.history-table .current-admission-row td {
+    background-color: var(--status-blue);
+    font-weight: 600;
+    color: var(--status-blue-text);
+}
+.history-table .current-admission-row .icon-button {
+    color: var(--status-blue-text);
+}
 
 .add-history-form { margin-top: 20px; }
 .history-form-grid {

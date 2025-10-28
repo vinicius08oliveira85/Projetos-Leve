@@ -32,7 +32,7 @@ export type HistoryEntry = {
   diario: string;
 };
 
-export type LeitoType = 'CTI' | 'CTI PED' | 'CTI NEO' | 'USI' | 'USI PED' | 'UI' | 'UI PSQ';
+export type LeitoType = 'CTI' | 'CTI PED' | 'CTI NEO' | 'USI' | 'USI PED' | 'UI' | 'UI PSQ' | 'EL';
 
 export type LeitoRecord = {
   id: number;
@@ -98,12 +98,12 @@ export type Patient = {
   diagnosticos: string;
   leitoOntem: LeitoType | 'Alta';
   leitoHoje: LeitoType | 'Alta';
-  leitoAuditado: LeitoType | 'Alta';
+  leitoAuditado: LeitoType | 'Alta' | '';
   hospitalDestino: string;
   permanencia: string;
   relatorioMedico: string;
-  criticidade: 'Diário 24h' | '48h' | '72h';
-  programa: 'Outros' | 'Oncologia' | 'Confirma Suporte' | 'Home Care';
+  criticidade: 'Revisão Padrão' | 'Diário 24h' | '48h' | '72h';
+  programa: 'Outros' | 'Oncologia' | 'Confirma Suporte' | 'Home Care' | 'Gestação Segura';
   altaPrev: string;
   altaReplan: string;
   altaFim: string;
@@ -133,8 +133,16 @@ export type Patient = {
   aguardandoDesospitalizacao?: string;
   desdeDesospitalizacao?: string;
   esperaDesospitalizacaoDetalhes?: EsperaDesospitalizacaoDetalhes;
-  taskStatus?: 'Atrasado' | 'Auditados' | 'Em Fila';
   rede?: string;
   regiao?: string;
   macroRegiao?: string;
+  produto?: string;
+  carencia?: 'Sim' | 'Não';
+  cpt?: 'Sim' | 'Não';
+  cidEvolutivo?: string;
+  cidAlta?: string;
+  medico?: string;
+  telefone?: string;
+  ultimaConsulta?: string;
+  notasRegulacao?: string;
 };
