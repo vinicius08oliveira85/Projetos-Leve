@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'https://aistudiocdn.com/react@^19.2.0';
+import React, { useState, useMemo } from 'react';
 import { User, Patient, MenuItem, Esperas } from './types/index.ts';
 import { mockPatients } from './data/mockPatients.ts';
 import { generateChangeHistory } from './utils/helpers.ts';

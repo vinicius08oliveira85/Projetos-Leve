@@ -1,4 +1,4 @@
-import React, { useState } from 'https://aistudiocdn.com/react@^19.2.0';
+import React, { useState } from 'react';
 import AppHeader from '../components/AppHeader.tsx';
 
 const PainelIndicadoresInternacao = ({ onBack }: { onBack: () => void }) => {

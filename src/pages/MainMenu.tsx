@@ -1,4 +1,4 @@
-import React from 'https://aistudiocdn.com/react@^19.2.0';
+import React from 'react';
 import { User, MenuItem } from '../types/index.ts';
 import AppHeader from '../components/AppHeader.tsx';
 

@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'https://aistudiocdn.com/react@^19.2.0';
+import React, { useState, useEffect, useRef } from 'react';
 import { Patient, User, Esperas, HistoryEntry, LeitoType, GuiaStatus } from '../types/index.ts';
-import { GoogleGenAI, LiveServerMessage, Blob, Modality } from 'https://aistudiocdn.com/@google/genai@^1.25.0';
+import { GoogleGenAI, LiveServerMessage, Blob, Modality } from '@google/genai';
 import { createBlob, formatDateDdMmYy } from '../utils/helpers.ts';
 import AppHeader from '../components/AppHeader.tsx';
 import GestaoDeLeito from '../components/GestaoDeLeito.tsx';

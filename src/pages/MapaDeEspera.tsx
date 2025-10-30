@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'https://aistudiocdn.com/react@^19.2.0';
+import React, { useState, useMemo } from 'react';
 import { Patient, User, Esperas } from '../types/index.ts';
 import AppHeader from '../components/AppHeader.tsx';
 import { formatDateDdMmYy } from '../utils/helpers.ts';

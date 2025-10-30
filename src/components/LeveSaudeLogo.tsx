@@ -1,4 +1,4 @@
-import React from 'https://aistudiocdn.com/react@^19.2.0';
+import React from 'react';
 
 const LeveSaudeLogo = ({ width, height }: { width?: number | string; height?: number | string }) => (
     <svg width={width} height={height} viewBox="0 0 245 88" fill="none" xmlns="http://www.w3.org/2000/svg">

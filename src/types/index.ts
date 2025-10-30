@@ -1,4 +1,4 @@
-import React from 'https://aistudiocdn.com/react@^19.2.0';
+import React from 'react';
 
 export type User = {
   name: string;

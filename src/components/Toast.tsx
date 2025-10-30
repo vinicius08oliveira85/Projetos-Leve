@@ -1,4 +1,4 @@
-import React, { useEffect } from 'https://aistudiocdn.com/react@^19.2.0';
+import React, { useEffect } from 'react';
 
 const Toast = ({ message, type, onClose }: { message: string, type: 'success' | 'error', onClose: () => void }) => {
     useEffect(() => {

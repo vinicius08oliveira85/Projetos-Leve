@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'https://aistudiocdn.com/react@^19.2.0';
+import React, { useState, useMemo } from 'react';
 import { Patient, User, GuiaStatus, HistoryEntry } from '../types';
 import AppHeader from '../components/AppHeader.tsx';
 import { formatDateDdMmYy, calculatePermanencia, formatDateTimeDdMmYy } from '../utils/helpers.ts';
