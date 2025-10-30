@@ -388,57 +388,52 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
     };
 
 
-    const ReviewCard = ({ title, subtitle, badgeText, totalCount, subCounts, theme, onClick, isActive }: { 
+    const ReviewCard = ({ title, subtitle, badgeLabel, badgeValue, totalCount, subCounts, theme, onClick, isActive }: { 
         title: string; 
         subtitle?: string;
-        badgeText: string; 
+        badgeLabel: string;
+        badgeValue: string;
         totalCount: number; 
         subCounts: { emFila: number; auditados: number; altaReplan: number; atrasado: number; };
         theme: string; 
         onClick: () => void;
         isActive: boolean;
-    }) => {
-        const badgeTextParts = badgeText.split(' ');
-        const badgeTitle = badgeTextParts.slice(0, -1).join(' ');
-        const badgeValue = badgeTextParts.slice(-1)[0];
-        
-        return (
-            <div className={`review-card theme-${theme} ${isActive ? 'active' : ''}`} onClick={onClick}>
-                <div className="review-card-header">
-                    <div>
-                        <h3 className="review-card-title">{title}</h3>
-                        {subtitle && <span className="review-card-subtitle">{subtitle}</span>}
-                    </div>
-                    <div className="review-card-badge">
-                        <span className="badge-title">{badgeTitle}</span>
-                        <span className="badge-value">{badgeValue}</span>
-                    </div>
+    }) => (
+        <div className={`review-card theme-${theme} ${isActive ? 'active' : ''}`} onClick={onClick}>
+            <div className="review-card-header">
+                <div className="review-card-title-group">
+                    <h3 className="review-card-title">{title}</h3>
+                    {subtitle && <span className="review-card-subtitle">{subtitle}</span>}
                 </div>
-                <div className="review-card-main-count">{totalCount}</div>
-                <div className="review-card-sub-counts">
-                    <div className="sub-count-item">
-                        <span className="sub-count-number em-fila">{subCounts.emFila}</span>
-                        <span className="sub-count-label">Em fila</span>
-                    </div>
-                    <div className="sub-count-item">
-                        <span className="sub-count-number auditados">{subCounts.auditados}</span>
-                        <span className="sub-count-label">Auditados</span>
-                    </div>
-                    <div className="sub-count-item">
-                        <span className="sub-count-number atrasado">{subCounts.atrasado}</span>
-                        <span className="sub-count-label">Atrasado</span>
-                    </div>
-                    <div className="sub-count-item">
-                        <span className="sub-count-number alta-replan">{subCounts.altaReplan}</span>
-                        <span className="sub-count-label">Alta Replan</span>
-                    </div>
-                </div>
-                <div className="review-card-button">
-                    Ver Detalhes &gt;
+                <div className="review-card-badge">
+                    <span className="review-card-badge-label">{badgeLabel}</span>
+                    <span className="review-card-badge-value">{badgeValue}</span>
                 </div>
             </div>
-        )
-    };
+            <div className="review-card-main-count">{totalCount}</div>
+            <div className="review-card-sub-counts">
+                <div className="sub-count-item">
+                    <span className="sub-count-number em-fila">{subCounts.emFila}</span>
+                    <span className="sub-count-label">Em fila</span>
+                </div>
+                <div className="sub-count-item">
+                    <span className="sub-count-number auditados">{subCounts.auditados}</span>
+                    <span className="sub-count-label">Auditados</span>
+                </div>
+                <div className="sub-count-item">
+                    <span className="sub-count-number atrasado">{subCounts.atrasado}</span>
+                    <span className="sub-count-label">Atrasado</span>
+                </div>
+                <div className="sub-count-item">
+                    <span className="sub-count-number alta-replan">{subCounts.altaReplan}</span>
+                    <span className="sub-count-label">Alta Replan</span>
+                </div>
+            </div>
+            <div className="review-card-button">
+                Ver Detalhes &gt;
+            </div>
+        </div>
+    );
 
     return (
         <div className="page-container">
@@ -450,7 +445,8 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
             <div className="review-cards-container">
                  <ReviewCard 
                     title="Revisão Padrão" 
-                    badgeText="Criticidade 0" 
+                    badgeLabel="Criticidade"
+                    badgeValue="0"
                     totalCount={reviewStats.padrao.total}
                     subCounts={reviewStats.padrao}
                     theme="purple" 
@@ -458,9 +454,10 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                     isActive={JSON.stringify(criticidadeFilter) === JSON.stringify(['Revisão Padrão'])}
                  />
                  <ReviewCard 
-                    title="Revisão diária" 
+                    title="Revisão diária"
                     subtitle="24h"
-                    badgeText="Criticidade 1" 
+                    badgeLabel="Criticidade"
+                    badgeValue="1"
                     totalCount={reviewStats.daily.total}
                     subCounts={reviewStats.daily}
                     theme="blue" 
@@ -469,7 +466,8 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                  />
                  <ReviewCard 
                     title="Revisão em 48h" 
-                    badgeText="Criticidade 2" 
+                    badgeLabel="Criticidade"
+                    badgeValue="2"
                     totalCount={reviewStats.h48.total}
                     subCounts={reviewStats.h48}
                     theme="orange" 
@@ -478,7 +476,8 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                  />
                  <ReviewCard 
                     title="Revisão em 72h" 
-                    badgeText="Criticidade 3" 
+                    badgeLabel="Criticidade"
+                    badgeValue="3"
                     totalCount={reviewStats.h72.total}
                     subCounts={reviewStats.h72}
                     theme="green" 

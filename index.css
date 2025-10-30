@@ -333,23 +333,25 @@ body {
     flex-wrap: wrap;
 }
 
+.review-card-title-group {
+    /* Wrapper for title and subtitle */
+}
+
 .review-card-title {
     font-size: 20px;
     font-weight: 600;
     color: #344054;
-    line-height: 1.3;
+    line-height: 1.2;
 }
 
 .review-card-subtitle {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 600;
     color: #344054;
-    display: block;
-    line-height: 1.3;
+    line-height: 1;
 }
 
 .review-card-badge {
-    height: auto;
     padding: 6px 12px;
     border-radius: 16px;
     display: flex;
@@ -357,25 +359,21 @@ body {
     justify-content: center;
     align-items: center;
     color: var(--white-color);
-    font-weight: 600;
-    flex-shrink: 0;
     text-align: center;
-    min-width: 90px;
+    flex-shrink: 0;
+    min-width: 80px;
 }
 
-.badge-title {
-    font-size: 10px;
+.review-card-badge-label {
+    font-size: 11px;
     font-weight: 500;
-    line-height: 1;
-    display: block;
-    margin-bottom: 2px;
+    line-height: 1.2;
 }
 
-.badge-value {
-    font-size: 18px;
+.review-card-badge-value {
+    font-size: 22px;
     font-weight: 700;
     line-height: 1;
-    display: block;
 }
 
 
@@ -401,12 +399,6 @@ body {
     font-size: 18px;
     font-weight: 600;
     display: block;
-}
-
-.sub-count-label {
-    font-size: 13px;
-    color: var(--light-text-color);
-    line-height: 1.2;
 }
 
 .sub-count-number.em-fila { color: var(--info-color); }
@@ -1924,13 +1916,5 @@ legend {
     /* NCI Panel */
     .nci-filters-grid {
         grid-template-columns: 1fr;
-    }
-
-    .review-card-sub-counts {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
-        margin-bottom: 24px;
-        padding: 0;
     }
 }
