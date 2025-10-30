@@ -403,6 +403,12 @@ body {
     display: block;
 }
 
+.sub-count-label {
+    font-size: 13px;
+    color: var(--light-text-color);
+    line-height: 1.2;
+}
+
 .sub-count-number.em-fila { color: var(--info-color); }
 .sub-count-number.auditados { color: var(--success-color); }
 .sub-count-number.alta-replan { color: var(--error-color); }
@@ -1918,5 +1924,13 @@ legend {
     /* NCI Panel */
     .nci-filters-grid {
         grid-template-columns: 1fr;
+    }
+
+    .review-card-sub-counts {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 24px;
+        padding: 0;
     }
 }
