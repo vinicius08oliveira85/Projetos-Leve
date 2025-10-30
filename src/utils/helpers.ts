@@ -45,7 +45,7 @@ export const formatDateTimeDdMmYy = (dateString?: string): string => {
 
 export const calculateDaysWaiting = (sinceDate?: string): number | string => {
     if (!sinceDate || !/^\d{4}-\d{2}-\d{2}$/.test(sinceDate)) return 'N/A';
-    const today = new Date('2025-08-24T12:00:00Z');
+    const today = new Date();
     const [year, month, day] = sinceDate.split('-').map(Number);
     const startDate = new Date(Date.UTC(year, month - 1, day));
     const diffTime = today.getTime() - startDate.getTime();
@@ -57,7 +57,7 @@ export const calculateDaysWaiting = (sinceDate?: string): number | string => {
 export const calculatePermanencia = (dataIH?: string, altaFim?: string): string => {
     if (!dataIH || !/^\d{4}-\d{2}-\d{2}$/.test(dataIH)) return 'N/A';
 
-    const today = new Date('2025-08-24T12:00:00Z');
+    const today = new Date();
     
     const startDate = new Date(dataIH);
     // Use altaFim if provided and valid, otherwise use today

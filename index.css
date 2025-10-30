@@ -307,6 +307,20 @@ body {
     border: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.review-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.07);
+}
+
+.review-card.active {
+    border: 2px solid var(--primary-color);
+    padding: 23px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.07);
+    transform: translateY(-4px);
 }
 
 .review-card-header {
@@ -362,6 +376,7 @@ body {
 .sub-count-number.em-fila { color: var(--info-color); }
 .sub-count-number.auditados { color: var(--success-color); }
 .sub-count-number.alta-replan { color: var(--error-color); }
+.sub-count-number.atrasado { color: var(--error-color); }
 
 .review-card-button {
     width: 100%;
@@ -371,13 +386,15 @@ body {
     color: var(--white-color);
     font-weight: 600;
     font-size: 16px;
-    cursor: pointer;
     transition: filter 0.2s;
     margin-top: auto;
+    text-align: center;
 }
-.review-card-button:hover {
+
+.review-card:hover .review-card-button {
     filter: brightness(0.9);
 }
+
 
 .theme-blue {
     background-color: #F0F9FF;
@@ -557,17 +574,22 @@ body {
     border-collapse: collapse;
 }
 .patient-table th, .patient-table td {
-    padding: 12px 8px;
+    padding: 12px 8px; /* Increased horizontal padding for better spacing */
     text-align: left;
     border-bottom: 1px solid var(--border-color);
-    font-size: 14px;
+    font-size: 13px;
     vertical-align: middle;
 }
 
 .patient-table th {
     font-weight: 600;
     color: var(--light-text-color);
-    white-space: nowrap;
+    white-space: normal;
+}
+.patient-table th:first-child, 
+.patient-table td:first-child {
+    padding: 12px 16px; /* Generous padding for the icon column */
+    text-align: center;
 }
 .patient-table .truncate {
     max-width: 150px;
@@ -1089,7 +1111,7 @@ legend {
     border: 1px solid #adb5bd; /* Darker border for visibility */
     background-color: var(--white-color);
     font-family: inherit;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text-color);
     width: 100%;
     transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
@@ -1102,7 +1124,7 @@ legend {
     border: 1px solid #adb5bd; /* Darker border for visibility */
     background-color: var(--white-color);
     font-family: inherit;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text-color);
     width: 100%;
     transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
@@ -1142,7 +1164,7 @@ legend {
     border: 1px solid var(--border-color);
     background-color: var(--white-color);
     color: var(--text-color);
-    font-size: 14px;
+    font-size: 13px;
     font-family: inherit;
     -webkit-appearance: none;
     -moz-appearance: none;

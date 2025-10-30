@@ -1,7 +1,9 @@
-import React, { useState } from 'https://aistudiocdn.com/react@^19.2.0';
+import React, { useState, useMemo } from 'https://aistudiocdn.com/react@^19.2.0';
 import { Patient, User } from '../types/index.ts';
 import { formatDateDdMmYy, calculateDaysWaiting } from '../utils/helpers.ts';
 import AppHeader from '../components/AppHeader.tsx';
+
+type DesospitalizacaoFilter = 'Todos' | 'Sim' | 'Não';
 
 const PacientesAguardandoDesospitalizacao = ({ onBack, onViewDetails, user, patients, onSavePatients, showToast }: {
     onBack: () => void,
@@ -13,7 +15,31 @@ const PacientesAguardandoDesospitalizacao = ({ onBack, onViewDetails, user, pati
 }) => {
     
     const [editedPatients, setEditedPatients] = useState<Record<number, Partial<Patient>>>({});
-    const desospitalizacaoPatients = patients.filter(p => p.esperas.desospitalizacao);
+    const [filters, setFilters] = useState({
+        aguardaAntibioticoTerapia: 'Todos' as DesospitalizacaoFilter,
+        aguardaCurativoDomiciliar: 'Todos' as DesospitalizacaoFilter,
+        aguardaOxigenioTerapia: 'Todos' as DesospitalizacaoFilter,
+        aguardaHomeCare: 'Todos' as DesospitalizacaoFilter,
+        aguardaPedido: 'Todos' as DesospitalizacaoFilter,
+    });
+
+    const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setFilters(prev => ({ ...prev, [name]: value as DesospitalizacaoFilter }));
+    };
+
+    const desospitalizacaoPatients = useMemo(() => patients
+        .filter(p => p.esperas.desospitalizacao)
+        .filter(p => {
+            const details = p.esperaDesospitalizacaoDetalhes;
+            if (filters.aguardaAntibioticoTerapia !== 'Todos' && (details?.aguardaAntibioticoTerapia || 'Não') !== filters.aguardaAntibioticoTerapia) return false;
+            if (filters.aguardaCurativoDomiciliar !== 'Todos' && (details?.aguardaCurativoDomiciliar || 'Não') !== filters.aguardaCurativoDomiciliar) return false;
+            if (filters.aguardaOxigenioTerapia !== 'Todos' && (details?.aguardaOxigenioTerapia || 'Não') !== filters.aguardaOxigenioTerapia) return false;
+            if (filters.aguardaHomeCare !== 'Todos' && (details?.aguardaHomeCare || 'Não') !== filters.aguardaHomeCare) return false;
+            if (filters.aguardaPedido !== 'Todos' && (details?.aguardaPedido || 'Não') !== filters.aguardaPedido) return false;
+            return true;
+        }), [patients, filters]);
+    
 
     const handleFieldChange = (patientId: number, field: keyof Patient, value: any) => {
         setEditedPatients(prev => ({
@@ -36,6 +62,14 @@ const PacientesAguardandoDesospitalizacao = ({ onBack, onViewDetails, user, pati
         showToast("Alterações salvas com sucesso!");
     };
 
+    const filterFields: { key: keyof typeof filters; label: string }[] = [
+        { key: 'aguardaAntibioticoTerapia', label: 'Aguarda Antibiótico terapia' },
+        { key: 'aguardaCurativoDomiciliar', label: 'Aguarda Curativo domiciliar' },
+        { key: 'aguardaOxigenioTerapia', label: 'Aguarda Oxigênio terapia' },
+        { key: 'aguardaHomeCare', label: 'Aguarda Home Care' },
+        { key: 'aguardaPedido', label: 'Aguarda Pedido' },
+    ];
+
     return (
         <div className="page-container">
             <AppHeader
@@ -43,6 +77,23 @@ const PacientesAguardandoDesospitalizacao = ({ onBack, onViewDetails, user, pati
                 subtitle="Lista dos pacientes que aguardam por desospitalização."
                 onBack={onBack}
             />
+
+            <div className="content-box" style={{ marginTop: '20px' }}>
+                <h2 className="section-title-box">Espera Desospitalização</h2>
+                <div className="espera-desospitalizacao-grid">
+                    {filterFields.map(field => (
+                        <div className="form-group form-group-highlight" key={field.key}>
+                            <label>{field.label}</label>
+                            <select name={field.key} value={filters[field.key]} onChange={handleFilterChange}>
+                                <option value="Todos">Todos</option>
+                                <option value="Sim">Sim</option>
+                                <option value="Não">Não</option>
+                            </select>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
             <div className="espera-filter-bar" style={{ justifyContent: 'flex-end', marginTop: '20px' }}>
                 <div className="filter-controls">
                     <button className="save-button" onClick={handleSave} disabled={Object.keys(editedPatients).length === 0}>Salvar</button>

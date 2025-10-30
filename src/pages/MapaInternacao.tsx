@@ -131,40 +131,80 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
 
     const reviewStats = useMemo(() => {
         const stats = {
-            padrao: { total: 0, emFila: 0, auditados: 0, altaReplan: 0 },
-            daily: { total: 0, emFila: 0, auditados: 0, altaReplan: 0 },
-            h48: { total: 0, emFila: 0, auditados: 0, altaReplan: 0 },
-            h72: { total: 0, emFila: 0, auditados: 0, altaReplan: 0 },
+            padrao: { total: 0, emFila: 0, auditados: 0, altaReplan: 0, atrasado: 0 },
+            daily: { total: 0, emFila: 0, auditados: 0, altaReplan: 0, atrasado: 0 },
+            h48: { total: 0, emFila: 0, auditados: 0, altaReplan: 0, atrasado: 0 },
+            h72: { total: 0, emFila: 0, auditados: 0, altaReplan: 0, atrasado: 0 },
         };
-
+    
+        const today = new Date();
+        today.setUTCHours(0, 0, 0, 0);
+    
         patients.forEach(p => {
+            if (p.altaFim) {
+                return;
+            }
+    
             let category: keyof typeof stats | null = null;
             if (p.criticidade === 'Revisão Padrão') category = 'padrao';
             else if (p.criticidade === 'Diário 24h') category = 'daily';
             else if (p.criticidade === '48h') category = 'h48';
             else if (p.criticidade === '72h') category = 'h72';
-
+    
             if (category) {
-                const isAuditado = !!p.leitoAuditado;
-                const isAtrasado = !!p.altaReplan;
-
-                if (isAuditado) {
-                    stats[category].auditados++;
-                } else {
-                    stats[category].emFila++;
-                }
-                
-                if (isAtrasado) {
+                if (p.altaReplan) {
                     stats[category].altaReplan++;
+                }
+    
+                const getCriticidadeDays = (criticidade: Patient['criticidade']): number => {
+                    switch (criticidade) {
+                        case 'Diário 24h': return 1;
+                        case '48h': return 2;
+                        case '72h': return 3;
+                        default: return Infinity;
+                    }
+                };
+    
+                const criticidadeDays = getCriticidadeDays(p.criticidade);
+
+                if (criticidadeDays === Infinity) { // Handle 'Revisão Padrão'
+                    const hasAuditToday = (p.leitoHistory || []).some(h => {
+                        const recordDate = new Date(h.date);
+                        recordDate.setUTCHours(0, 0, 0, 0);
+                        return recordDate.getTime() === today.getTime();
+                    });
+                    if (hasAuditToday) {
+                        stats[category].auditados++;
+                    } else {
+                        stats[category].emFila++;
+                    }
+                } else { // Handle time-based criticidade
+                    const relevantHistory = (p.leitoHistory || []);
+                    const sortedHistory = relevantHistory.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                    const lastAuditDateStr = sortedHistory.length > 0 ? sortedHistory[0].date : p.dataIH;
+                    
+                    const lastAuditDate = new Date(lastAuditDateStr);
+                    lastAuditDate.setUTCHours(0, 0, 0, 0);
+    
+                    const diffMilliseconds = today.getTime() - lastAuditDate.getTime();
+                    const diffDays = Math.floor(diffMilliseconds / (1000 * 60 * 60 * 24));
+    
+                    if (diffDays < criticidadeDays) {
+                        stats[category].auditados++;
+                    } else if (diffDays === criticidadeDays) {
+                        stats[category].emFila++;
+                    } else { // diffDays > criticidadeDays
+                        stats[category].atrasado++;
+                    }
                 }
             }
         });
-
+    
         Object.keys(stats).forEach(key => {
             const cat = key as keyof typeof stats;
-            stats[cat].total = stats[cat].emFila + stats[cat].auditados;
+            stats[cat].total = stats[cat].emFila + stats[cat].auditados + stats[cat].atrasado;
         });
-
+    
         return stats;
     }, [patients]);
     
@@ -348,15 +388,16 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
     };
 
 
-    const ReviewCard = ({ title, badgeText, totalCount, subCounts, theme, onClick }: { 
+    const ReviewCard = ({ title, badgeText, totalCount, subCounts, theme, onClick, isActive }: { 
         title: string; 
         badgeText: string; 
         totalCount: number; 
-        subCounts: { emFila: number; auditados: number; altaReplan: number };
+        subCounts: { emFila: number; auditados: number; altaReplan: number; atrasado: number; };
         theme: string; 
-        onClick: () => void 
+        onClick: () => void;
+        isActive: boolean;
     }) => (
-        <div className={`review-card theme-${theme}`}>
+        <div className={`review-card theme-${theme} ${isActive ? 'active' : ''}`} onClick={onClick}>
             <div className="review-card-header">
                 <h3 className="review-card-title">{title}</h3>
                 <div className="review-card-badge">{badgeText}</div>
@@ -372,13 +413,17 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                     <span className="sub-count-label">Auditados</span>
                 </div>
                 <div className="sub-count-item">
+                    <span className="sub-count-number atrasado">{subCounts.atrasado}</span>
+                    <span className="sub-count-label">Atrasado</span>
+                </div>
+                <div className="sub-count-item">
                     <span className="sub-count-number alta-replan">{subCounts.altaReplan}</span>
                     <span className="sub-count-label">Alta Replan</span>
                 </div>
             </div>
-            <button className="review-card-button" onClick={onClick}>
+            <div className="review-card-button">
                 Ver Detalhes &gt;
-            </button>
+            </div>
         </div>
     );
 
@@ -397,6 +442,7 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                     subCounts={reviewStats.padrao}
                     theme="purple" 
                     onClick={() => handleSelectReview(['Revisão Padrão'])} 
+                    isActive={JSON.stringify(criticidadeFilter) === JSON.stringify(['Revisão Padrão'])}
                  />
                  <ReviewCard 
                     title="Revisão diária 24h" 
@@ -404,7 +450,8 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                     totalCount={reviewStats.daily.total}
                     subCounts={reviewStats.daily}
                     theme="blue" 
-                    onClick={() => handleSelectReview(['Diário 24h'])} 
+                    onClick={() => handleSelectReview(['Diário 24h'])}
+                    isActive={JSON.stringify(criticidadeFilter) === JSON.stringify(['Diário 24h'])}
                  />
                  <ReviewCard 
                     title="Revisão em 48h" 
@@ -412,7 +459,8 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                     totalCount={reviewStats.h48.total}
                     subCounts={reviewStats.h48}
                     theme="orange" 
-                    onClick={() => handleSelectReview(['48h'])} 
+                    onClick={() => handleSelectReview(['48h'])}
+                    isActive={JSON.stringify(criticidadeFilter) === JSON.stringify(['48h'])}
                  />
                  <ReviewCard 
                     title="Revisão em 72h" 
@@ -420,7 +468,8 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                     totalCount={reviewStats.h72.total}
                     subCounts={reviewStats.h72}
                     theme="green" 
-                    onClick={() => handleSelectReview(['72h'])} 
+                    onClick={() => handleSelectReview(['72h'])}
+                    isActive={JSON.stringify(criticidadeFilter) === JSON.stringify(['72h'])}
                  />
             </div>
 
@@ -533,16 +582,59 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                             const editedData = editedPatients[p.id] || {};
                             const patientData = { ...p, ...editedData };
                             
-                            const isAtrasado = !!patientData.altaReplan;
-                            let statusText: 'Atrasado' | 'Auditado' | 'Em Fila';
-                            let badgeClass: string;
+                            const today = new Date();
+                            today.setUTCHours(0, 0, 0, 0);
 
-                            if (isAtrasado) {
-                                statusText = 'Atrasado';
-                                badgeClass = 'atrasado';
-                            } else {
-                                statusText = patientData.leitoAuditado ? 'Auditado' : 'Em Fila';
-                                badgeClass = statusText.toLowerCase().replace(' ', '-');
+                            let statusText: 'Atrasado' | 'Auditado' | 'Em Fila' | null = null;
+                            let badgeClass: 'atrasado' | 'auditado' | 'em-fila' | null = null;
+
+                            if (!patientData.altaFim) { // Only calculate for internados patients
+                                const getCriticidadeDays = (criticidade: Patient['criticidade']): number => {
+                                    switch (criticidade) {
+                                        case 'Diário 24h': return 1;
+                                        case '48h': return 2;
+                                        case '72h': return 3;
+                                        default: return Infinity;
+                                    }
+                                };
+
+                                const criticidadeDays = getCriticidadeDays(patientData.criticidade);
+
+                                if (criticidadeDays === Infinity) { // Revisão Padrão
+                                    const hasAuditToday = (patientData.leitoHistory || []).some(h => {
+                                        const recordDate = new Date(h.date);
+                                        recordDate.setUTCHours(0, 0, 0, 0);
+                                        return recordDate.getTime() === today.getTime();
+                                    });
+                                    if (hasAuditToday) {
+                                        statusText = 'Auditado';
+                                        badgeClass = 'auditado';
+                                    } else {
+                                        statusText = 'Em Fila';
+                                        badgeClass = 'em-fila';
+                                    }
+                                } else { // Time-based criticidade
+                                    const relevantHistory = (patientData.leitoHistory || []);
+                                    const sortedHistory = relevantHistory.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                                    const lastAuditDateStr = sortedHistory.length > 0 ? sortedHistory[0].date : patientData.dataIH;
+                                    
+                                    const lastAuditDate = new Date(lastAuditDateStr);
+                                    lastAuditDate.setUTCHours(0, 0, 0, 0);
+
+                                    const diffMilliseconds = today.getTime() - lastAuditDate.getTime();
+                                    const diffDays = Math.floor(diffMilliseconds / (1000 * 60 * 60 * 24));
+
+                                    if (diffDays < criticidadeDays) {
+                                        statusText = 'Auditado';
+                                        badgeClass = 'auditado';
+                                    } else if (diffDays === criticidadeDays) {
+                                        statusText = 'Em Fila';
+                                        badgeClass = 'em-fila';
+                                    } else { // diffDays > criticidadeDays
+                                        statusText = 'Atrasado';
+                                        badgeClass = 'atrasado';
+                                    }
+                                }
                             }
 
                             const latestLeitoRecord = [...(patientData.leitoHistory || [])]
@@ -624,9 +716,13 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                                     <td>{patientData.natureza}</td>
                                     <td><span className={`status-badge ${statusToClassName(patientData.status)}`}>{patientData.status}</span></td>
                                     <td>
-                                        <span className={`task-status-badge ${badgeClass}`}>
-                                            {statusText}
-                                        </span>
+                                        {statusText && badgeClass ? (
+                                            <span className={`task-status-badge ${badgeClass}`}>
+                                                {statusText}
+                                            </span>
+                                        ) : (
+                                            <span>-</span>
+                                        )}
                                     </td>
                                 </tr>
                             );
