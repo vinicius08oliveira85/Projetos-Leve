@@ -388,44 +388,57 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
     };
 
 
-    const ReviewCard = ({ title, badgeText, totalCount, subCounts, theme, onClick, isActive }: { 
+    const ReviewCard = ({ title, subtitle, badgeText, totalCount, subCounts, theme, onClick, isActive }: { 
         title: string; 
+        subtitle?: string;
         badgeText: string; 
         totalCount: number; 
         subCounts: { emFila: number; auditados: number; altaReplan: number; atrasado: number; };
         theme: string; 
         onClick: () => void;
         isActive: boolean;
-    }) => (
-        <div className={`review-card theme-${theme} ${isActive ? 'active' : ''}`} onClick={onClick}>
-            <div className="review-card-header">
-                <h3 className="review-card-title">{title}</h3>
-                <div className="review-card-badge">{badgeText}</div>
+    }) => {
+        const badgeTextParts = badgeText.split(' ');
+        const badgeTitle = badgeTextParts.slice(0, -1).join(' ');
+        const badgeValue = badgeTextParts.slice(-1)[0];
+        
+        return (
+            <div className={`review-card theme-${theme} ${isActive ? 'active' : ''}`} onClick={onClick}>
+                <div className="review-card-header">
+                    <div>
+                        <h3 className="review-card-title">{title}</h3>
+                        {subtitle && <span className="review-card-subtitle">{subtitle}</span>}
+                    </div>
+                    <div className="review-card-badge">
+                        <span className="badge-title">{badgeTitle}</span>
+                        <span className="badge-value">{badgeValue}</span>
+                    </div>
+                </div>
+                <div className="review-card-main-count">{totalCount}</div>
+                <div className="review-card-sub-counts">
+                    <div className="sub-count-item">
+                        <span className="sub-count-number em-fila">{subCounts.emFila}</span>
+                        <span className="sub-count-label">Em fila</span>
+                    </div>
+                    <div className="sub-count-item">
+                        <span className="sub-count-number auditados">{subCounts.auditados}</span>
+                        <span className="sub-count-label">Auditados</span>
+                    </div>
+                    <div className="sub-count-item">
+                        <span className="sub-count-number atrasado">{subCounts.atrasado}</span>
+                        <span className="sub-count-label">Atrasado</span>
+                    </div>
+                    <div className="sub-count-item">
+                        <span className="sub-count-number alta-replan">{subCounts.altaReplan}</span>
+                        <span className="sub-count-label">Alta Replan</span>
+                    </div>
+                </div>
+                <div className="review-card-button">
+                    Ver Detalhes &gt;
+                </div>
             </div>
-            <div className="review-card-main-count">{totalCount}</div>
-            <div className="review-card-sub-counts">
-                <div className="sub-count-item">
-                    <span className="sub-count-number em-fila">{subCounts.emFila}</span>
-                    <span className="sub-count-label">Em fila</span>
-                </div>
-                <div className="sub-count-item">
-                    <span className="sub-count-number auditados">{subCounts.auditados}</span>
-                    <span className="sub-count-label">Auditados</span>
-                </div>
-                <div className="sub-count-item">
-                    <span className="sub-count-number atrasado">{subCounts.atrasado}</span>
-                    <span className="sub-count-label">Atrasado</span>
-                </div>
-                <div className="sub-count-item">
-                    <span className="sub-count-number alta-replan">{subCounts.altaReplan}</span>
-                    <span className="sub-count-label">Alta Replan</span>
-                </div>
-            </div>
-            <div className="review-card-button">
-                Ver Detalhes &gt;
-            </div>
-        </div>
-    );
+        )
+    };
 
     return (
         <div className="page-container">
@@ -445,7 +458,8 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                     isActive={JSON.stringify(criticidadeFilter) === JSON.stringify(['Revisão Padrão'])}
                  />
                  <ReviewCard 
-                    title="Revisão diária 24h" 
+                    title="Revisão diária" 
+                    subtitle="24h"
                     badgeText="Criticidade 1" 
                     totalCount={reviewStats.daily.total}
                     subCounts={reviewStats.daily}
