@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Patient, User, Esperas, HistoryEntry, LeitoType, GuiaStatus } from '../types/index.ts';
-import { GoogleGenAI, LiveServerMessage, Blob, Modality } from '@google/genai';
+import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { createBlob, formatDateDdMmYy } from '../utils/helpers.ts';
 import AppHeader from '../components/AppHeader.tsx';
 import GestaoDeLeito from '../components/GestaoDeLeito.tsx';
@@ -65,15 +65,17 @@ const PatientDetails = ({ patient: initialPatient, allPatients, onBack, user, on
 
     useEffect(() => {
         return () => {
-            if (isRecording) {
-                streamRef.current?.getTracks().forEach(track => track.stop());
-                if (audioContextRef.current?.state !== 'closed') {
-                    audioContextRef.current?.close();
-                }
-                sessionPromiseRef.current?.then(session => session.close());
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop());
+            }
+            if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+                audioContextRef.current.close();
+            }
+            if (sessionPromiseRef.current) {
+                sessionPromiseRef.current.then(session => session?.close());
             }
         };
-    }, [isRecording]);
+    }, []);
 
 
     const handleToggleRecording = async () => {
@@ -147,7 +149,7 @@ const PatientDetails = ({ patient: initialPatient, allPatients, onBack, user, on
 
             } catch (error) {
                 console.error('Error getting user media or starting session', error);
-                alert('Não foi possível acessar o microfone. Por favor, verifique as permissões.');
+                showToast('Não foi possível acessar o microfone. Por favor, verifique as permissões.', 'error');
                 setIsRecording(false);
                 setDiarioText("");
             }

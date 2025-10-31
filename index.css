@@ -393,6 +393,7 @@ body {
 
 .sub-count-item {
     text-align: center;
+    flex: 1;
 }
 
 .sub-count-number {
@@ -881,7 +882,7 @@ legend {
     color: var(--white-color);
     border-radius: 8px;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: background-color: 0.3s;
 }
 .add-history-btn:hover {
     background-color: #d9591e;
