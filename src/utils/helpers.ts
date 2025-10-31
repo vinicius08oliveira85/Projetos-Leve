@@ -1,4 +1,5 @@
-import { Blob, HistoryEntry, Patient, User, Esperas } from '../types/index.ts';
+import { HistoryEntry, Patient, User, Esperas } from '../types/index.ts';
+import { Blob } from '@google/genai';
 
 export function encode(bytes: Uint8Array) {
   let binary = '';

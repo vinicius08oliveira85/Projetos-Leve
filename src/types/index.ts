@@ -20,12 +20,6 @@ export type Esperas = {
   desospitalizacao: boolean;
 };
 
-// Fix: Add Blob type definition for audio data to resolve an import error.
-export type Blob = {
-  data: string;
-  mimeType: string;
-};
-
 export type HistoryEntry = {
   data: string;
   responsavel: string;
