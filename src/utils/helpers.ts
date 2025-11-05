@@ -100,7 +100,8 @@ const fieldLabels: Partial<Record<keyof Patient, string>> = {
     natureza: 'Natureza da Guia',
     altaPrev: 'Alta Prevista',
     altaReplan: 'Alta Replanejada',
-    altaFim: 'Data da Alta',
+    altaFim: 'Alta FIM',
+    altaAutorizada: 'Alta Autorizada',
     motivoAlta: 'Motivo da Alta',
     criticidade: 'Criticidade',
     programa: 'Programa NCI',
@@ -154,7 +155,7 @@ export const generateChangeHistory = (original: Patient, updated: Patient, user:
             let from = originalValue || 'vazio';
             let to = updatedValue || 'vazio';
 
-            if (['altaPrev', 'altaReplan', 'altaFim', 'desdeCirurgia', 'desdeExame', 'desdeParecer', 'desdeDesospitalizacao', 'ultimaConsulta'].includes(key)) {
+            if (['altaPrev', 'altaReplan', 'altaFim', 'altaAutorizada', 'desdeCirurgia', 'desdeExame', 'desdeParecer', 'desdeDesospitalizacao', 'ultimaConsulta'].includes(key)) {
                 from = formatDateForHistory(originalValue as string | undefined);
                 to = formatDateForHistory(updatedValue as string | undefined);
             }

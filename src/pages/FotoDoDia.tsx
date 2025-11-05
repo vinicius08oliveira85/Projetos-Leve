@@ -155,29 +155,6 @@ const FotoDoDia = ({ onBack, onBackToCards, onSelectPatient, user, patients, onU
         setEditingLeitoPatient(null);
     };
 
-    const handleAltaFimChange = (patientId: number, newDate: string) => {
-        onUpdatePatients(prevPatients =>
-            prevPatients.map(p => {
-                if (p.id === patientId) {
-                    const updatedPatient = { ...p, altaFim: newDate };
-                    if (!newDate) {
-                        updatedPatient.motivoAlta = '';
-                    }
-                    return updatedPatient;
-                }
-                return p;
-            })
-        );
-    };
-
-    const handleMotivoAltaChange = (patientId: number, newMotivo: string) => {
-        onUpdatePatients(prevPatients =>
-            prevPatients.map(p =>
-                p.id === patientId ? { ...p, motivoAlta: newMotivo } : p
-            )
-        );
-    };
-
     const handleCriticidadeChange = (patientId: number, newValue: string) => {
         const newCriticidade = criticidadeValueMap[newValue];
         onUpdatePatients(prevPatients => 
@@ -236,7 +213,7 @@ const FotoDoDia = ({ onBack, onBackToCards, onSelectPatient, user, patients, onU
                             <th>Guia</th>
                             <th>Nome do Paciente</th>
                             <th>Data IH</th>
-                            <th>Data da Alta</th>
+                            <th>Alta FIM</th>
                             <th>Motivo da Alta</th>
                             <th>Permanência</th>
                             <th>Criticidade</th>
@@ -282,18 +259,8 @@ const FotoDoDia = ({ onBack, onBackToCards, onSelectPatient, user, patients, onU
                                                     type="date"
                                                     className="table-input-date"
                                                     value={p.altaFim || ''}
-                                                    onChange={(e) => handleAltaFimChange(p.id, e.target.value)}
+                                                    disabled
                                                 />
-                                                {p.altaFim && (
-                                                    <button 
-                                                        className="clear-date-button" 
-                                                        onClick={() => handleAltaFimChange(p.id, '')}
-                                                        aria-label="Limpar data"
-                                                        title="Limpar data"
-                                                    >
-                                                        &times;
-                                                    </button>
-                                                )}
                                             </div>
                                         ) : (
                                             formatDateDdMmYy(p.altaFim)
@@ -304,8 +271,7 @@ const FotoDoDia = ({ onBack, onBackToCards, onSelectPatient, user, patients, onU
                                             <select
                                                 className="table-select"
                                                 value={p.motivoAlta || ''}
-                                                onChange={(e) => handleMotivoAltaChange(p.id, e.target.value)}
-                                                disabled={!p.altaFim}
+                                                disabled
                                             >
                                                 <option value="" disabled>Selecione</option>
                                                 {motivoAltaOptions.map(option => (

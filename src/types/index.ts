@@ -101,6 +101,7 @@ export type Patient = {
   altaPrev: string;
   altaReplan: string;
   altaFim: string;
+  altaAutorizada?: string;
   motivoAlta?: string;
   status: GuiaStatus;
   esperas: Esperas;

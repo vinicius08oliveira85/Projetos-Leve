@@ -489,19 +489,20 @@ body {
 .filter-bar .form-group { margin-bottom: 0; }
 
 .filter-bar .secondary-action-button {
-    padding: 9px 16px;
-    border: 1px solid var(--primary-color);
+    padding: 10px 17px;
+    border: 1px solid #6c8294;
     border-radius: 6px;
-    background: transparent;
-    color: var(--primary-color);
+    background: #6c8294;
+    color: #e0e0e0;
     cursor: pointer;
     font-weight: 500;
-    transition: background-color 0.2s, color 0.2s;
+    transition: background-color 0.2s;
+    font-size: 14px;
+    line-height: 1;
 }
 
 .filter-bar .secondary-action-button:hover {
-    background-color: var(--primary-color);
-    color: var(--white-color);
+    background-color: #5a6d7e;
 }
 .filter-bar .save-button {
     padding: 10px 17px;
@@ -1747,6 +1748,118 @@ legend {
     padding-right: 55px;
 }
 
+/* New styles for PatientDetails Criticidade section */
+.criticidade-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+    gap: 24px;
+}
+.criticidade-info {
+    display: flex;
+    flex-direction: column;
+}
+.criticidade-level-label {
+    font-size: 12px;
+    color: var(--light-text-color);
+    text-transform: uppercase;
+    font-weight: 500;
+}
+.criticidade-level-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-color);
+    line-height: 1.2;
+}
+.criticidade-level-desc {
+    font-size: 14px;
+    color: var(--light-text-color);
+}
+.criticidade-header .form-group {
+    min-width: 220px;
+    flex-shrink: 0;
+}
+
+.input-highlight-blue {
+    background-color: var(--status-blue) !important;
+    border-color: #90caf9 !important;
+}
+.input-highlight-green {
+    background-color: var(--status-green) !important;
+    border-color: #a5d6a7 !important;
+}
+
+.form-group-sublabel {
+    font-size: 12px;
+    color: var(--light-text-color);
+    margin-top: 4px;
+    display: block;
+    min-height: 2.5em; 
+}
+.form-group-sublabel.overdue {
+    color: var(--error-color);
+    font-weight: 500;
+}
+.gestao-alta-summary-box {
+    margin-top: 24px;
+    background-color: #f9fafb;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 16px;
+}
+.gestao-alta-summary-box h4 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+.gestao-alta-summary-box p {
+    font-size: 14px;
+    color: var(--text-color);
+    margin: 0;
+    line-height: 1.5;
+}
+.gestao-alta-summary-box .text-red {
+    color: var(--error-color);
+    font-weight: 600;
+}
+
+.filter-actions-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.filter-totalizer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--primary-color);
+    color: var(--white-color);
+    padding: 8px 24px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.totalizer-label {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    opacity: 0.9;
+    letter-spacing: 0.5px;
+}
+
+.totalizer-value {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+
 /* --- Responsive Design --- */
 @media (max-width: 800px) {
     /* General Layout */
@@ -1863,6 +1976,10 @@ legend {
     }
     .details-main-content {
         padding: 16px;
+    }
+    .criticidade-header {
+        flex-direction: column;
+        align-items: stretch;
     }
 
     /* Grids in forms */

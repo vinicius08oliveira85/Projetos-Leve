@@ -34,6 +34,65 @@ const criticidadeValueMap: { [key: string]: Patient['criticidade'] } = {
     '3': '72h',
 };
 
+const getAuditStatus = (patient: Patient, referenceDate: Date): 'Auditado' | 'Em Fila' | 'Atrasado' | null => {
+    const refDate = new Date(referenceDate);
+    refDate.setUTCHours(0, 0, 0, 0);
+
+    // If patient discharge is before reference date, they are not active.
+    if (patient.altaFim) {
+        const altaFimDate = new Date(patient.altaFim);
+        altaFimDate.setUTCHours(0, 0, 0, 0);
+        if (altaFimDate < refDate) return null;
+    }
+    
+    // If patient admission is after reference date, they are not active yet.
+    const admissionDate = new Date(patient.dataIH);
+    admissionDate.setUTCHours(0, 0, 0, 0);
+    if (admissionDate > refDate) {
+        return null;
+    }
+    
+    const referenceDateStr = refDate.toISOString().split('T')[0];
+
+    const getCriticidadeDays = (criticidade: Patient['criticidade']): number => {
+        switch (criticidade) {
+            case 'Diário 24h': return 1;
+            case '48h': return 2;
+            case '72h': return 3;
+            default: return Infinity;
+        }
+    };
+
+    const criticidadeDays = getCriticidadeDays(patient.criticidade);
+
+    if (criticidadeDays === Infinity) { // Revisão Padrão
+        const hasAuditOnReferenceDate = (patient.leitoHistory || []).some(h => h.date === referenceDateStr);
+        return hasAuditOnReferenceDate ? 'Auditado' : 'Em Fila';
+    } else { // Time-based criticidade
+        const relevantHistory = (patient.leitoHistory || [])
+            .filter(h => new Date(h.date) <= refDate)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+        const lastAuditDateStr = relevantHistory.length > 0 ? relevantHistory[0].date : patient.dataIH;
+        
+        const lastAuditDate = new Date(lastAuditDateStr);
+        lastAuditDate.setUTCHours(0, 0, 0, 0);
+
+
+        const diffMilliseconds = refDate.getTime() - lastAuditDate.getTime();
+        const diffDays = Math.floor(diffMilliseconds / (1000 * 60 * 60 * 24));
+
+        if (diffDays < criticidadeDays) {
+            return 'Auditado';
+        } else if (diffDays === criticidadeDays) {
+            return 'Em Fila';
+        } else { // diffDays > criticidadeDays
+            return 'Atrasado';
+        }
+    }
+};
+
+
 const LeitoModal = ({ patient: initialPatient, user, onClose, onSave }: {
     patient: Patient;
     user: User;
@@ -65,6 +124,20 @@ const LeitoModal = ({ patient: initialPatient, user, onClose, onSave }: {
     );
 };
 
+type PatientStatusFilterType = 'Internados' | 'Alta Autorizada';
+type AltaReplanFilterType = 'Todos' | 'Com Alta Replan' | 'Sem Alta Replan';
+type StatusFilterType = 'Todos' | 'Auditado' | 'Em Fila' | 'Atrasado';
+
+const guiaStatuses: GuiaStatus[] = [
+    'Guia emitida / liberada', 'Guia negada', 'Guia cancelada', 'Guia sob auditoria',
+    'Guia parcialmente liberada', 'Guia aguardando autorização', 'Guia pedido/aguard confirmação',
+    'Guia com setor de OPME',
+];
+
+const defaultGuiaStatuses = guiaStatuses.filter(
+    status => status !== 'Guia cancelada' && status !== 'Guia negada'
+);
+
 
 const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient, onSavePatients, title, subtitle, showToast }: { 
     onBack: () => void, 
@@ -84,10 +157,10 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
     // Applied filters
     const [dateFilter, setDateFilter] = useState<string>('');
     const [hospitalFilter, setHospitalFilter] = useState<string[]>([]);
-    const [guiaStatusFilter, setGuiaStatusFilter] = useState<GuiaStatus[]>([]);
-    const [patientStatusFilter, setPatientStatusFilter] = useState<'Internados' | 'Com Alta'>('Internados');
-    const [statusFilter, setStatusFilter] = useState<'Todos' | 'Auditado' | 'Em Fila'>('Todos');
-    const [altaReplanFilter, setAltaReplanFilter] = useState<'Todos' | 'Atrasado' | 'Sem atraso'>('Todos');
+    const [guiaStatusFilter, setGuiaStatusFilter] = useState<GuiaStatus[]>(defaultGuiaStatuses);
+    const [patientStatusFilter, setPatientStatusFilter] = useState<PatientStatusFilterType>('Internados');
+    const [statusFilter, setStatusFilter] = useState<StatusFilterType>('Todos');
+    const [altaReplanFilter, setAltaReplanFilter] = useState<AltaReplanFilterType>('Todos');
     const [nameSearch, setNameSearch] = useState('');
 
 
@@ -95,7 +168,7 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
     const [tempDateFilter, setTempDateFilter] = useState(dateFilter);
     const [tempHospitalFilter, setTempHospitalFilter] = useState(hospitalFilter);
     const [tempGuiaStatusFilter, setTempGuiaStatusFilter] = useState(guiaStatusFilter);
-    const [tempPatientStatusFilter, setTempPatientStatusFilter] = useState(patientStatusFilter);
+    const [tempPatientStatusFilter, setTempPatientStatusFilter] = useState<PatientStatusFilterType>(patientStatusFilter);
     const [tempStatusFilter, setTempStatusFilter] = useState(statusFilter);
     const [tempAltaReplanFilter, setTempAltaReplanFilter] = useState(altaReplanFilter);
 
@@ -108,12 +181,7 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
     const guiaDropdownRef = useRef<HTMLDivElement>(null);
 
     const uniqueHospitals = useMemo(() => [...new Set(patients.map(p => p.hospitalDestino))], [patients]);
-    const guiaStatuses: GuiaStatus[] = [
-        'Guia emitida / liberada', 'Guia negada', 'Guia cancelada', 'Guia sob auditoria',
-        'Guia parcialmente liberada', 'Guia aguardando autorização', 'Guia pedido/aguard confirmação',
-        'Guia com setor de OPME',
-    ];
-
+    
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (guiaDropdownRef.current && !guiaDropdownRef.current.contains(event.target as Node)) {
@@ -209,22 +277,57 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
     }, [patients]);
     
     const filteredPatients = useMemo(() => {
+        const today = new Date();
+        today.setUTCHours(0, 0, 0, 0);
+
         return patients
             .filter(p => {
                 const criticidadeMatch = !criticidadeFilter || criticidadeFilter.includes(p.criticidade);
-                const dateMatch = !dateFilter || p.dataIH === dateFilter;
+                
+                const dateMatch = (() => {
+                    if (!dateFilter) return true;
+                
+                    const filterDate = new Date(dateFilter);
+                    filterDate.setUTCHours(0, 0, 0, 0);
+                
+                    const admissionDate = new Date(p.dataIH);
+                    admissionDate.setUTCHours(0, 0, 0, 0);
+                
+                    if (admissionDate > filterDate) return false;
+                
+                    if (p.altaFim) {
+                        const dischargeDate = new Date(p.altaFim);
+                        dischargeDate.setUTCHours(0, 0, 0, 0);
+                        if (dischargeDate < filterDate) return false;
+                    }
+                
+                    const auditStatusOnDate = getAuditStatus(p, filterDate);
+                    return auditStatusOnDate === 'Em Fila' || auditStatusOnDate === 'Atrasado';
+                })();
+
                 const hospitalMatch = hospitalFilter.length === 0 || hospitalFilter.includes(p.hospitalDestino);
                 const guiaStatusMatch = guiaStatusFilter.length === 0 || guiaStatusFilter.includes(p.status);
-                const patientStatusMatch = patientStatusFilter === 'Internados' ? !p.altaFim : !!p.altaFim;
                 
-                const isAtrasado = !!p.altaReplan;
-                const isAuditado = !!p.leitoAuditado;
-                const primaryStatus = isAuditado ? 'Auditado' : 'Em Fila';
-
-                const statusMatch = statusFilter === 'Todos' || primaryStatus === statusFilter;
+                const patientStatusMatch = (() => {
+                    switch (patientStatusFilter) {
+                        case 'Internados':
+                            return !p.altaAutorizada;
+                        case 'Alta Autorizada':
+                            return !!p.altaAutorizada;
+                        default:
+                            return true;
+                    }
+                })();
+                
                 const altaReplanMatch = altaReplanFilter === 'Todos' ||
-                    (altaReplanFilter === 'Atrasado' && isAtrasado) ||
-                    (altaReplanFilter === 'Sem atraso' && !isAtrasado);
+                    (altaReplanFilter === 'Com Alta Replan' && !!p.altaReplan) ||
+                    (altaReplanFilter === 'Sem Alta Replan' && !p.altaReplan);
+
+                const statusMatch = (() => {
+                    if (statusFilter === 'Todos') return true;
+                    const currentAuditStatus = getAuditStatus(p, today);
+                    return currentAuditStatus === statusFilter;
+                })();
                 
                 const nameMatch = nameSearch === '' || p.nome.toLowerCase().includes(nameSearch.toLowerCase());
 
@@ -267,14 +370,14 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                 newHistoryEntries.push({
                     data: today,
                     responsavel: user.name,
-                    diario: `Log de Leito: Adicionado registro para data ${formatDateDdMmYy(updatedRecord.date)} - Leito do Dia: ${updatedRecord.leitoDoDia}.`
+                    diario: `Log de Leito: Adicionado registro para data ${formatDateDdMmYy(updatedRecord.date)} com leito '${updatedRecord.leitoDoDia}'.`
                 });
             } else {
                 if (originalRecord.leitoDoDia !== updatedRecord.leitoDoDia) {
                      newHistoryEntries.push({
                         data: today,
                         responsavel: user.name,
-                        diario: `Log de Leito: Atualizado registro da data ${formatDateDdMmYy(updatedRecord.date)} - Leito do Dia: de '${originalRecord.leitoDoDia}' para '${updatedRecord.leitoDoDia}'.`
+                        diario: `Log de Leito: Leito do dia para data ${formatDateDdMmYy(updatedRecord.date)} alterado de '${originalRecord.leitoDoDia}' para '${updatedRecord.leitoDoDia}'.`
                     });
                 }
             }
@@ -289,15 +392,23 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
         setEditingLeitoPatient(null);
     };
 
-    const handleAltaFimChange = (patientId: number, newDate: string) => {
-        const changes: Partial<Patient> = { altaFim: newDate };
-        if (!newDate) {
-            changes.motivoAlta = '';
-        }
+    const handleCriticidadeChange = (patientId: number, newValue: string) => {
+        const newCriticidade = criticidadeValueMap[newValue];
         setEditedPatients(prev => ({
             ...prev,
-            [patientId]: { ...prev[patientId], ...changes }
+            [patientId]: { ...prev[patientId], criticidade: newCriticidade }
         }));
+    };
+    
+    const handleAltaAutorizadaChange = (patientId: number, newDate: string) => {
+        setEditedPatients(prev => {
+            const currentChanges = prev[patientId] || {};
+            const newChanges: Partial<Patient> = { ...currentChanges, altaAutorizada: newDate };
+            if (!newDate) {
+                newChanges.motivoAlta = '';
+            }
+            return { ...prev, [patientId]: newChanges };
+        });
     };
 
     const handleMotivoAltaChange = (patientId: number, newMotivo: string) => {
@@ -307,14 +418,6 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
         }));
     };
 
-    const handleCriticidadeChange = (patientId: number, newValue: string) => {
-        const newCriticidade = criticidadeValueMap[newValue];
-        setEditedPatients(prev => ({
-            ...prev,
-            [patientId]: { ...prev[patientId], criticidade: newCriticidade }
-        }));
-    };
-    
     const handleApplyFilters = () => {
         setDateFilter(tempDateFilter);
         setHospitalFilter(tempHospitalFilter);
@@ -327,14 +430,14 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
     const handleClearFilters = () => {
         setTempDateFilter('');
         setTempHospitalFilter([]);
-        setTempGuiaStatusFilter([]);
+        setTempGuiaStatusFilter(defaultGuiaStatuses);
         setTempPatientStatusFilter('Internados');
         setTempStatusFilter('Todos');
         setTempAltaReplanFilter('Todos');
         
         setDateFilter('');
         setHospitalFilter([]);
-        setGuiaStatusFilter([]);
+        setGuiaStatusFilter(defaultGuiaStatuses);
         setPatientStatusFilter('Internados');
         setStatusFilter('Todos');
         setAltaReplanFilter('Todos');
@@ -367,8 +470,8 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
             
             const finalData = { ...originalPatient, ...changes };
 
-            if (finalData.altaFim && !finalData.motivoAlta) {
-                showToast(`Para o paciente ${finalData.nome}, o Motivo da Alta é obrigatório.`, 'error');
+            if (finalData.altaAutorizada && !finalData.motivoAlta) {
+                showToast(`Para o paciente ${finalData.nome}, o Motivo da Alta é obrigatório quando a Alta Autorizada é preenchida.`, 'error');
                 validationFailed = true;
                 break;
             }
@@ -487,77 +590,71 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
             </div>
 
             <div className="filter-bar" style={{ marginTop: '20px', marginBottom: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, borderBottom: '1px solid var(--border-color)', flexDirection: 'column', alignItems: 'stretch', gap: '16px'}}>
-                <div style={{display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '20px'}}>
-                    <div className="filter-controls">
-                         <div className="form-group">
-                            <label>Status do Paciente:</label>
-                            <select value={tempPatientStatusFilter} onChange={(e) => setTempPatientStatusFilter(e.target.value as any)}>
-                                <option value="Internados">Internados</option>
-                                <option value="Com Alta">Com Alta</option>
-                            </select>
-                        </div>
-                        <div className="form-group">
-                            <label>Portal do tempo (Data IH):</label>
-                            <input type="date" value={tempDateFilter} onChange={(e) => setTempDateFilter(e.target.value)} />
-                        </div>
-                        <div className="form-group" ref={hospitalDropdownRef}>
-                            <label>Hosp. Destino:</label>
-                            <div className="multi-select-dropdown">
-                                <button type="button" className="multi-select-dropdown-button" onClick={() => setIsHospitalDropdownOpen(prev => !prev)}>
-                                    {tempHospitalFilter.length === 0 ? 'Todos' : tempHospitalFilter.length === 1 ? tempHospitalFilter[0] : `${tempHospitalFilter.length} selecionados`}
-                                </button>
-                                {isHospitalDropdownOpen && (
-                                    <div className="multi-select-dropdown-menu">
-                                        {uniqueHospitals.map(h => (
-                                            <label key={h} className="multi-select-dropdown-item">
-                                                <input type="checkbox" checked={tempHospitalFilter.includes(h)} onChange={() => handleHospitalMultiChange(h)} /> {h}
-                                            </label>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        <div className="form-group" ref={guiaDropdownRef}>
-                            <label>Status da Guia:</label>
-                            <div className="multi-select-dropdown">
-                                <button type="button" className="multi-select-dropdown-button" onClick={() => setIsGuiaDropdownOpen(prev => !prev)}>
-                                    {tempGuiaStatusFilter.length === 0 ? 'Todos' : tempGuiaStatusFilter.length === 1 ? tempGuiaStatusFilter[0] : `${tempGuiaStatusFilter.length} selecionados`}
-                                </button>
-                                {isGuiaDropdownOpen && (
-                                    <div className="multi-select-dropdown-menu">
-                                        {guiaStatuses.map(s => (
-                                            <label key={s} className="multi-select-dropdown-item">
-                                                <input type="checkbox" checked={tempGuiaStatusFilter.includes(s)} onChange={() => handleGuiaStatusMultiChange(s)} /> {s}
-                                            </label>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        <div className="form-group">
-                            <label>Status:</label>
-                            <select value={tempStatusFilter} onChange={(e) => setTempStatusFilter(e.target.value as any)}>
-                                <option value="Todos">Todos</option>
-                                <option value="Auditado">Auditado</option>
-                                <option value="Em Fila">Em Fila</option>
-                            </select>
-                        </div>
-                         <div className="form-group">
-                            <label>Alta Replan:</label>
-                            <select value={tempAltaReplanFilter} onChange={(e) => setTempAltaReplanFilter(e.target.value as any)}>
-                                <option value="Todos">Todos</option>
-                                <option value="Atrasado">Atrasado</option>
-                                <option value="Sem atraso">Sem atraso</option>
-                            </select>
+                <div className="filter-controls">
+                    <div className="form-group">
+                        <label>Status do Paciente:</label>
+                        <select value={tempPatientStatusFilter} onChange={(e) => setTempPatientStatusFilter(e.target.value as PatientStatusFilterType)}>
+                            <option value="Internados">Internados</option>
+                            <option value="Alta Autorizada">Alta Autorizada</option>
+                        </select>
+                    </div>
+                    <div className="form-group">
+                        <label>Alta Replan:</label>
+                        <select value={tempAltaReplanFilter} onChange={(e) => setTempAltaReplanFilter(e.target.value as any)}>
+                            <option value="Todos">Todos</option>
+                            <option value="Com Alta Replan">Com Alta Replan</option>
+                            <option value="Sem Alta Replan">Sem Alta Replan</option>
+                        </select>
+                    </div>
+                    <div className="form-group">
+                        <label>Portal do tempo (Data IH):</label>
+                        <input type="date" value={tempDateFilter} onChange={(e) => setTempDateFilter(e.target.value)} />
+                    </div>
+                    <div className="form-group" ref={hospitalDropdownRef}>
+                        <label>Hosp. Destino:</label>
+                        <div className="multi-select-dropdown">
+                            <button type="button" className="multi-select-dropdown-button" onClick={() => setIsHospitalDropdownOpen(prev => !prev)}>
+                                {tempHospitalFilter.length === 0 ? 'Todos' : tempHospitalFilter.length === 1 ? tempHospitalFilter[0] : `${tempHospitalFilter.length} selecionados`}
+                            </button>
+                            {isHospitalDropdownOpen && (
+                                <div className="multi-select-dropdown-menu">
+                                    {uniqueHospitals.map(h => (
+                                        <label key={h} className="multi-select-dropdown-item">
+                                            <input type="checkbox" checked={tempHospitalFilter.includes(h)} onChange={() => handleHospitalMultiChange(h)} /> {h}
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
-                    <div className="filter-actions">
-                        <button onClick={handleClearFilters} className="secondary-action-button">Limpar</button>
-                        <button onClick={handleApplyFilters} className="save-button">Aplicar Filtros</button>
-                        <button onClick={handleSaveAllChanges} className="save-button" disabled={Object.keys(editedPatients).length === 0}>Salvar Alterações</button>
+                    <div className="form-group" ref={guiaDropdownRef}>
+                        <label>Status da Guia:</label>
+                        <div className="multi-select-dropdown">
+                            <button type="button" className="multi-select-dropdown-button" onClick={() => setIsGuiaDropdownOpen(prev => !prev)}>
+                                {tempGuiaStatusFilter.length === 0 ? 'Todos' : tempGuiaStatusFilter.length === guiaStatuses.length ? 'Todos' : tempGuiaStatusFilter.length === 1 ? tempGuiaStatusFilter[0] : `${tempGuiaStatusFilter.length} selecionados`}
+                            </button>
+                            {isGuiaDropdownOpen && (
+                                <div className="multi-select-dropdown-menu">
+                                    {guiaStatuses.map(s => (
+                                        <label key={s} className="multi-select-dropdown-item">
+                                            <input type="checkbox" checked={tempGuiaStatusFilter.includes(s)} onChange={() => handleGuiaStatusMultiChange(s)} /> {s}
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    <div className="form-group">
+                        <label>Status:</label>
+                        <select value={tempStatusFilter} onChange={(e) => setTempStatusFilter(e.target.value as any)}>
+                            <option value="Todos">Todos</option>
+                            <option value="Auditado">Auditado</option>
+                            <option value="Em Fila">Em Fila</option>
+                            <option value="Atrasado">Atrasado</option>
+                        </select>
                     </div>
                 </div>
-                 <div>
+                <div>
                     <div className="form-group">
                         <label>Buscar por Nome:</label>
                         <input
@@ -567,6 +664,17 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                             onChange={(e) => setNameSearch(e.target.value)}
                             style={{width: '100%'}}
                         />
+                    </div>
+                </div>
+                <div className="filter-actions-wrapper">
+                    <div className="filter-actions">
+                        <button onClick={handleClearFilters} className="secondary-action-button">Limpar</button>
+                        <button onClick={handleApplyFilters} className="save-button">Aplicar Filtros</button>
+                        <button onClick={handleSaveAllChanges} className="save-button" disabled={Object.keys(editedPatients).length === 0}>Salvar Alterações</button>
+                    </div>
+                    <div className="filter-totalizer">
+                        <span className="totalizer-label">TOTAL</span>
+                        <span className="totalizer-value">{filteredPatients.length}</span>
                     </div>
                 </div>
             </div>
@@ -579,7 +687,7 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                             <th>Guia</th>
                             <th>Nome do Paciente</th>
                             <th>Data IH</th>
-                            <th>Data da Alta</th>
+                            <th>Alta Autorizada</th>
                             <th>Motivo da Alta</th>
                             <th>Permanência</th>
                             <th>Criticidade</th>
@@ -598,57 +706,15 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                             const today = new Date();
                             today.setUTCHours(0, 0, 0, 0);
 
-                            let statusText: 'Atrasado' | 'Auditado' | 'Em Fila' | null = null;
-                            let badgeClass: 'atrasado' | 'auditado' | 'em-fila' | null = null;
+                            const statusResult = getAuditStatus(patientData, today);
+                            let statusText: string | null = null;
+                            let badgeClass: string | null = null;
 
-                            if (!patientData.altaFim) { // Only calculate for internados patients
-                                const getCriticidadeDays = (criticidade: Patient['criticidade']): number => {
-                                    switch (criticidade) {
-                                        case 'Diário 24h': return 1;
-                                        case '48h': return 2;
-                                        case '72h': return 3;
-                                        default: return Infinity;
-                                    }
-                                };
-
-                                const criticidadeDays = getCriticidadeDays(patientData.criticidade);
-
-                                if (criticidadeDays === Infinity) { // Revisão Padrão
-                                    const hasAuditToday = (patientData.leitoHistory || []).some(h => {
-                                        const recordDate = new Date(h.date);
-                                        recordDate.setUTCHours(0, 0, 0, 0);
-                                        return recordDate.getTime() === today.getTime();
-                                    });
-                                    if (hasAuditToday) {
-                                        statusText = 'Auditado';
-                                        badgeClass = 'auditado';
-                                    } else {
-                                        statusText = 'Em Fila';
-                                        badgeClass = 'em-fila';
-                                    }
-                                } else { // Time-based criticidade
-                                    const relevantHistory = (patientData.leitoHistory || []);
-                                    const sortedHistory = relevantHistory.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                                    const lastAuditDateStr = sortedHistory.length > 0 ? sortedHistory[0].date : patientData.dataIH;
-                                    
-                                    const lastAuditDate = new Date(lastAuditDateStr);
-                                    lastAuditDate.setUTCHours(0, 0, 0, 0);
-
-                                    const diffMilliseconds = today.getTime() - lastAuditDate.getTime();
-                                    const diffDays = Math.floor(diffMilliseconds / (1000 * 60 * 60 * 24));
-
-                                    if (diffDays < criticidadeDays) {
-                                        statusText = 'Auditado';
-                                        badgeClass = 'auditado';
-                                    } else if (diffDays === criticidadeDays) {
-                                        statusText = 'Em Fila';
-                                        badgeClass = 'em-fila';
-                                    } else { // diffDays > criticidadeDays
-                                        statusText = 'Atrasado';
-                                        badgeClass = 'atrasado';
-                                    }
-                                }
+                            if (statusResult) {
+                                statusText = statusResult;
+                                badgeClass = statusResult.toLowerCase().replace(' ', '-');
                             }
+
 
                             const latestLeitoRecord = [...(patientData.leitoHistory || [])]
                                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
@@ -670,13 +736,13 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                                                 <input
                                                     type="date"
                                                     className="table-input-date"
-                                                    value={patientData.altaFim || ''}
-                                                    onChange={(e) => handleAltaFimChange(p.id, e.target.value)}
+                                                    value={patientData.altaAutorizada || ''}
+                                                    onChange={(e) => handleAltaAutorizadaChange(p.id, e.target.value)}
                                                 />
-                                                {patientData.altaFim && (
+                                                {patientData.altaAutorizada && (
                                                     <button 
                                                         className="clear-date-button" 
-                                                        onClick={() => handleAltaFimChange(p.id, '')}
+                                                        onClick={() => handleAltaAutorizadaChange(p.id, '')}
                                                         aria-label="Limpar data"
                                                         title="Limpar data"
                                                     >
@@ -685,7 +751,7 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                                                 )}
                                             </div>
                                         ) : (
-                                            formatDateDdMmYy(patientData.altaFim)
+                                            formatDateDdMmYy(patientData.altaAutorizada)
                                         )}
                                     </td>
                                     <td>
@@ -694,7 +760,7 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                                                 className="table-select"
                                                 value={patientData.motivoAlta || ''}
                                                 onChange={(e) => handleMotivoAltaChange(p.id, e.target.value)}
-                                                disabled={!patientData.altaFim}
+                                                disabled={!patientData.altaAutorizada}
                                             >
                                                 <option value="" disabled>Selecione</option>
                                                 {motivoAltaOptions.map(option => (

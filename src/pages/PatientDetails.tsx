@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Patient, User, Esperas, HistoryEntry, LeitoType, GuiaStatus } from '../types/index.ts';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { createBlob, formatDateDdMmYy } from '../utils/helpers.ts';
@@ -34,6 +34,84 @@ const statusToClassName = (status: GuiaStatus) => {
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-|-$/g, '');
+};
+
+const criticidadeDescriptionMap: Record<Patient['criticidade'], string> = {
+    'Revisão Padrão': 'Criticidade padrão - Revisão semanal',
+    'Diário 24h': 'Alta criticidade - Revisão em 24 horas',
+    '48h': 'Média criticidade - Revisão em 48 horas',
+    '72h': 'Baixa criticidade - Revisão em 72 horas',
+};
+
+const calculateDates = (baseDateStr: string, criticidade: Patient['criticidade']) => {
+    if (!baseDateStr) {
+        return {
+            proximaRevisao: { date: '', overdueText: '' },
+            altaPrevista: { date: '', overdueText: '' }
+        };
+    }
+
+    const baseDate = new Date(baseDateStr);
+    baseDate.setUTCHours(0, 0, 0, 0);
+
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    const addDays = (date: Date, days: number) => {
+        const newDate = new Date(date);
+        newDate.setDate(newDate.getDate() + days);
+        return newDate;
+    };
+    
+    const formatDate = (date: Date) => {
+        return date.toISOString().split('T')[0];
+    };
+    
+    const calculateOverdue = (date: Date) => {
+        if (date < today) {
+            const diffTime = today.getTime() - date.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return `Atrasado há ${diffDays} dia(s)`;
+        }
+        return '';
+    };
+
+    let reviewDays: number;
+    let dischargeDays: number;
+
+    switch (criticidade) {
+        case 'Diário 24h':
+            reviewDays = 1;
+            dischargeDays = 5;
+            break;
+        case '48h':
+            reviewDays = 2;
+            dischargeDays = 7;
+            break;
+        case '72h':
+            reviewDays = 3;
+            dischargeDays = 10;
+            break;
+        case 'Revisão Padrão':
+        default:
+            reviewDays = 7;
+            dischargeDays = 15;
+            break;
+    }
+
+    const proximaRevisaoDate = addDays(baseDate, reviewDays);
+    const altaPrevistaDate = addDays(baseDate, dischargeDays);
+
+    return {
+        proximaRevisao: {
+            date: formatDate(proximaRevisaoDate),
+            overdueText: calculateOverdue(proximaRevisaoDate)
+        },
+        altaPrevista: {
+            date: formatDate(altaPrevistaDate),
+            overdueText: calculateOverdue(altaPrevistaDate)
+        }
+    };
 };
 
 
@@ -158,19 +236,18 @@ const PatientDetails = ({ patient: initialPatient, allPatients, onBack, user, on
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
-        setPatient(prev => ({ ...prev, [name]: value }));
-    };
-    
-    const handleDateClear = (fieldName: keyof Patient) => {
         setPatient(prev => {
-            const newState: Partial<Patient> = { ...prev, [fieldName]: '' };
-            if (fieldName === 'altaFim') {
+            const newState = { ...prev, [name]: value };
+            if (name === 'altaAutorizada' && !value) {
                 newState.motivoAlta = '';
             }
-            return newState as Patient;
+            if (name === 'altaReplan' && !value) {
+                // Potentially add logic if clearing replan affects other fields
+            }
+            return newState;
         });
     };
-
+    
     const handleHistorySubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         
@@ -200,15 +277,6 @@ const PatientDetails = ({ patient: initialPatient, allPatients, onBack, user, on
     };
     
     const handleSave = () => {
-        if (patient.altaFim && !patient.motivoAlta) {
-            showToast('O Motivo da Alta é obrigatório quando a Data da Alta é preenchida.', 'error');
-            return;
-        }
-
-        // The logic for generating history is centralized in App.tsx's handleUpdatePatient,
-        // which uses the comprehensive generateChangeHistory helper. We just need to
-        // pass the updated patient state. This will correctly log all changes,
-        // including additions, modifications, and deletions in "Gestão de Leito".
         onSavePatient(patient, user);
         showToast('Alterações salvas com sucesso!');
     };
@@ -219,6 +287,11 @@ const PatientDetails = ({ patient: initialPatient, allPatients, onBack, user, on
         parecer: 'Espera Parecer',
         desospitalizacao: 'Espera Desospitalização'
     };
+
+    const { proximaRevisao, altaPrevista } = useMemo(
+        () => calculateDates(patient.dataIH, patient.criticidade),
+        [patient.dataIH, patient.criticidade]
+    );
 
     const renderContent = () => {
         switch (activeSession) {
@@ -337,7 +410,7 @@ const PatientDetails = ({ patient: initialPatient, allPatients, onBack, user, on
                             </div>
                             <div className="form-group form-group-highlight">
                                 <label>Alta FIM</label>
-                                <input type="date" name="altaFim" value={patient.altaFim || ''} onChange={handleInputChange} disabled={user.role !== 'admin'} />
+                                <input type="date" name="altaFim" value={patient.altaFim || ''} disabled />
                             </div>
                             <div className="form-group form-group-highlight">
                                 <label>Produto</label>
@@ -442,7 +515,7 @@ const PatientDetails = ({ patient: initialPatient, allPatients, onBack, user, on
                                         <th>Detalhes</th>
                                         <th>Guia</th>
                                         <th>Data IH</th>
-                                        <th>Data da Alta</th>
+                                        <th>Alta FIM</th>
                                         <th>Motivo da Alta</th>
                                         <th>Hospital Destino</th>
                                         <th>Natureza da Guia</th>
@@ -557,32 +630,78 @@ const PatientDetails = ({ patient: initialPatient, allPatients, onBack, user, on
                 return (
                     <>
                         <fieldset>
-                            <legend>Gestão de Alta</legend>
-                            <div className="form-grid">
-                                <div className="form-group">
-                                    <label>Alta Prevista</label>
-                                    <div className="date-input-wrapper">
-                                        <input type="date" name="altaPrev" value={patient.altaPrev} onChange={handleInputChange} disabled={user.role !== 'admin'} />
-                                        {patient.altaPrev && user.role === 'admin' && (
-                                            <button className="clear-date-button" onClick={() => handleDateClear('altaPrev')} title="Limpar data">&times;</button>
-                                        )}
-                                    </div>
+                            <legend>Criticidade e Prazos</legend>
+                            <div className="criticidade-header">
+                                <div className="criticidade-info">
+                                    <span className="criticidade-level-label">NÍVEL DE CRITICIDADE</span>
+                                    <span className="criticidade-level-value">{patient.criticidade}</span>
+                                    <span className="criticidade-level-desc">{criticidadeDescriptionMap[patient.criticidade]}</span>
                                 </div>
                                 <div className="form-group">
-                                    <label>Alta Replanejada</label>
-                                     <div className="date-input-wrapper">
-                                        <input type="date" name="altaReplan" value={patient.altaReplan} onChange={handleInputChange} disabled={user.role !== 'admin'} />
-                                        {patient.altaReplan && user.role === 'admin' && (
-                                            <button className="clear-date-button" onClick={() => handleDateClear('altaReplan')} title="Limpar data">&times;</button>
-                                        )}
-                                    </div>
+                                    <label>Selecionar criticidade</label>
+                                    <select name="criticidade" value={patient.criticidade} onChange={handleInputChange} disabled={user.role !== 'admin'}>
+                                        <option value="Revisão Padrão">Revisão Padrão</option>
+                                        <option value="Diário 24h">Diário 24h</option>
+                                        <option value="48h">48h</option>
+                                        <option value="72h">72h</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+                                <div className="form-group">
+                                    <label>Data base (internação)</label>
+                                    <input type="date" value={patient.dataIH} disabled />
+                                    <span className="form-group-sublabel">&nbsp;</span>
                                 </div>
                                 <div className="form-group">
-                                    <label>Data da Alta</label>
+                                    <label>Próxima revisão automática</label>
+                                    <input type="date" value={proximaRevisao.date} className="input-highlight-blue" disabled />
+                                    <span className={`form-group-sublabel ${proximaRevisao.overdueText ? 'overdue' : ''}`}>{proximaRevisao.overdueText || ' '}</span>
+                                </div>
+                                <div className="form-group">
+                                    <label>Alta prevista (automática)</label>
+                                    <input type="date" value={altaPrevista.date} className="input-highlight-green" disabled />
+                                    <span className={`form-group-sublabel ${altaPrevista.overdueText ? 'overdue' : ''}`}>{altaPrevista.overdueText || ' '}</span>
+                                </div>
+                                <div className="form-group">
+                                    <label>Alta replanejada (manual)</label>
                                     <div className="date-input-wrapper">
-                                        <input type="date" name="altaFim" value={patient.altaFim} onChange={handleInputChange} disabled={user.role !== 'admin'} />
-                                        {patient.altaFim && user.role === 'admin' && (
-                                            <button className="clear-date-button" onClick={() => handleDateClear('altaFim')} title="Limpar data">&times;</button>
+                                        <input type="date" name="altaReplan" value={patient.altaReplan || ''} onChange={handleInputChange} disabled={user.role !== 'admin'} />
+                                         {patient.altaReplan && (
+                                            <button
+                                                type="button"
+                                                className="clear-date-button"
+                                                onClick={() => handleInputChange({ target: { name: 'altaReplan', value: '' } } as any)}
+                                                aria-label="Limpar data"
+                                                title="Limpar data"
+                                            >
+                                                &times;
+                                            </button>
+                                        )}
+                                    </div>
+                                    <span className="form-group-sublabel">Informe uma data manual quando houver decisão clínica para antecipar ou postergar a alta.</span>
+                                </div>
+                                <div className="form-group">
+                                    <label>Alta Autorizada</label>
+                                    <div className="date-input-wrapper">
+                                        <input
+                                            type="date"
+                                            name="altaAutorizada"
+                                            value={patient.altaAutorizada || ''}
+                                            onChange={handleInputChange}
+                                            disabled={user.role !== 'admin'}
+                                        />
+                                        {patient.altaAutorizada && (
+                                            <button
+                                                type="button"
+                                                className="clear-date-button"
+                                                onClick={() => handleInputChange({ target: { name: 'altaAutorizada', value: '' } } as any)}
+                                                aria-label="Limpar data"
+                                                title="Limpar data"
+                                            >
+                                                &times;
+                                            </button>
                                         )}
                                     </div>
                                 </div>
@@ -592,66 +711,37 @@ const PatientDetails = ({ patient: initialPatient, allPatients, onBack, user, on
                                         name="motivoAlta"
                                         value={patient.motivoAlta || ''}
                                         onChange={handleInputChange}
-                                        disabled={user.role !== 'admin' || !patient.altaFim}
+                                        disabled={!patient.altaAutorizada || user.role !== 'admin'}
                                     >
-                                        <option value="" disabled>Selecione um motivo</option>
+                                        <option value="" disabled>Selecione</option>
                                         {motivoAltaOptions.map(option => (
                                             <option key={option} value={option}>{option}</option>
                                         ))}
                                     </select>
                                 </div>
-                            </div>
-                        </fieldset>
-                        <fieldset>
-                            <legend>Criticidade</legend>
-                            <div className="form-group">
-                                <label>Nível de Criticidade</label>
-                                <div className="radio-group-horizontal">
-                                    <label>
-                                        <input
-                                            type="radio"
-                                            name="criticidade"
-                                            value="Revisão Padrão"
-                                            checked={patient.criticidade === 'Revisão Padrão'}
-                                            onChange={handleInputChange}
-                                            disabled={user.role !== 'admin'}
-                                        />
-                                        Revisão Padrão
-                                    </label>
-                                    <label>
-                                        <input
-                                            type="radio"
-                                            name="criticidade"
-                                            value="Diário 24h"
-                                            checked={patient.criticidade === 'Diário 24h'}
-                                            onChange={handleInputChange}
-                                            disabled={user.role !== 'admin'}
-                                        />
-                                        Atendimento Diário (24h)
-                                    </label>
-                                    <label>
-                                        <input
-                                            type="radio"
-                                            name="criticidade"
-                                            value="48h"
-                                            checked={patient.criticidade === '48h'}
-                                            onChange={handleInputChange}
-                                            disabled={user.role !== 'admin'}
-                                        />
-                                        Atendimento em 48h
-                                    </label>
-                                    <label>
-                                        <input
-                                            type="radio"
-                                            name="criticidade"
-                                            value="72h"
-                                            checked={patient.criticidade === '72h'}
-                                            onChange={handleInputChange}
-                                            disabled={user.role !== 'admin'}
-                                        />
-                                        Atendimento em 72h
-                                    </label>
+                                <div className="form-group">
+                                    <label>Alta FIM</label>
+                                    <input
+                                        type="date"
+                                        name="altaFim"
+                                        value={patient.altaFim || ''}
+                                        disabled
+                                    />
                                 </div>
+                            </div>
+                            <div className="gestao-alta-summary-box">
+                                <h4>Gestão de Alta</h4>
+                                <p>
+                                    Alta automática prevista para <strong>{formatDateDdMmYy(altaPrevista.date)}</strong>.
+                                    {patient.altaReplan && (
+                                        <>
+                                            {' '}Com ajuste manual em <strong>{formatDateDdMmYy(patient.altaReplan)}</strong>.
+                                        </>
+                                    )}
+                                </p>
+                                <p>
+                                    Próxima revisão clínica <span className={proximaRevisao.overdueText ? 'text-red' : ''}>{proximaRevisao.overdueText || 'em dia'}</span>.
+                                </p>
                             </div>
                         </fieldset>
                     </>
