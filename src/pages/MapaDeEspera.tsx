@@ -9,12 +9,6 @@ const criticidadeDisplayMap: { [key in Patient['criticidade']]: string } = {
     '48h': '2',
     '72h': '3',
 };
-const criticidadeValueMap: { [key: string]: Patient['criticidade'] } = {
-    '0': 'Revisão Padrão',
-    '1': 'Diário 24h',
-    '2': '48h',
-    '3': '72h',
-};
 
 const MapaDeEspera = ({ onBack, onSelectPatient, user, patients, onSavePatients, showToast, title, subtitle, onViewDetails }: { 
     onBack: () => void, 
@@ -29,8 +23,6 @@ const MapaDeEspera = ({ onBack, onSelectPatient, user, patients, onSavePatients,
 }) => {
     const [hospitalFilter, setHospitalFilter] = useState('Todos');
     const [leitoFilter, setLeitoFilter] = useState('Todos');
-    const [editedPatients, setEditedPatients] = useState<Record<number, Partial<Patient>>>({});
-
 
     const esperaCounts = useMemo(() => {
         return patients.reduce((acc, p) => {
@@ -58,35 +50,6 @@ const MapaDeEspera = ({ onBack, onSelectPatient, user, patients, onSavePatients,
         });
     }, [patients, hospitalFilter, leitoFilter]);
     
-    const handleCriticidadeChange = (patientId: number, newValue: string) => {
-        const newCriticidade = criticidadeValueMap[newValue];
-        setEditedPatients(prev => ({
-            ...prev,
-            [patientId]: { ...prev[patientId], criticidade: newCriticidade }
-        }));
-    };
-
-    const handleAltaReplanChange = (patientId: number, newDate: string) => {
-        setEditedPatients(prev => ({
-            ...prev,
-            [patientId]: { ...prev[patientId], altaReplan: newDate }
-        }));
-    };
-
-    const handleSave = () => {
-        if (Object.keys(editedPatients).length === 0) {
-            showToast("Nenhuma alteração para salvar.");
-            return;
-        }
-        const updatedPatients = patients
-            .map(p => editedPatients[p.id] ? { ...p, ...editedPatients[p.id] } : p)
-            .filter(p => editedPatients[p.id]);
-
-        onSavePatients(updatedPatients, user);
-        setEditedPatients({});
-        showToast("Alterações salvas com sucesso!");
-    };
-
     const EsperaCard = ({ title, count, type }: { title: string, count: number, type: keyof Esperas }) => (
         <div className="espera-card">
             <h3>{title}</h3>
@@ -129,7 +92,6 @@ const MapaDeEspera = ({ onBack, onSelectPatient, user, patients, onSavePatients,
                             {leitos.map(l => <option key={l} value={l}>{l}</option>)}
                         </select>
                     </div>
-                    <button className="save-button" onClick={handleSave} disabled={Object.keys(editedPatients).length === 0}>Salvar</button>
                 </div>
             </div>
             <div className="table-container no-top-radius">
@@ -137,73 +99,35 @@ const MapaDeEspera = ({ onBack, onSelectPatient, user, patients, onSavePatients,
                     <thead>
                         <tr>
                             <th>HOSPITAL IH</th>
-                            <th>CPF</th>
                             <th>PACIENTE</th>
                             <th>DETALHES</th>
-                            <th>CRITICidade</th>
+                            <th>CRITICIDADE</th>
                             <th>LEITO</th>
                             <th>TIPO</th>
                             <th>INTERNAÇÃO</th>
                             <th>PREVISÃO DE ALTA</th>
-                            <th>ALTA REPLAN</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredPatients.map(p => {
-                            const editedData = editedPatients[p.id] || {};
-                            const patientData = { ...p, ...editedData };
                             return (
                                 <tr key={p.id}>
-                                    <td>{patientData.hospitalDestino}</td>
-                                    <td>{patientData.cpf}</td>
-                                    <td>{patientData.nome}</td>
+                                    <td>{p.hospitalDestino}</td>
+                                    <td>{p.nome}</td>
                                     <td>
                                         <button className="icon-button" onClick={() => onSelectPatient(p)} aria-label={`Detalhes de ${p.nome}`}>
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                                         </button>
                                     </td>
                                     <td>
-                                         <select
-                                            className="table-select"
-                                            value={criticidadeDisplayMap[patientData.criticidade]}
-                                            onChange={(e) => handleCriticidadeChange(p.id, e.target.value)}
-                                            style={patientData.criticidade === 'Revisão Padrão' ? {} : { color: 'var(--status-red-text)', fontWeight: 'bold' }}
-                                            disabled={user.role !== 'admin'}
-                                        >
-                                            <option value="0">0</option>
-                                            <option value="1">1</option>
-                                            <option value="2">2</option>
-                                            <option value="3">3</option>
-                                        </select>
+                                        <span style={p.criticidade === 'Revisão Padrão' ? {} : { color: 'var(--status-red-text)', fontWeight: 'bold' }}>
+                                            {criticidadeDisplayMap[p.criticidade]}
+                                        </span>
                                     </td>
-                                    <td>{patientData.leitoHoje}</td>
-                                    <td>{patientData.tipoInternacao}</td>
-                                    <td>{formatDateDdMmYy(patientData.dataIH)}</td>
-                                    <td>{formatDateDdMmYy(patientData.altaPrev)}</td>
-                                    <td>
-                                        {user.role === 'admin' ? (
-                                            <div className="date-input-wrapper">
-                                                <input 
-                                                    type="date" 
-                                                    className="table-input-date" 
-                                                    value={patientData.altaReplan}
-                                                    onChange={(e) => handleAltaReplanChange(p.id, e.target.value)}
-                                                />
-                                                {patientData.altaReplan && (
-                                                    <button 
-                                                        className="clear-date-button" 
-                                                        onClick={() => handleAltaReplanChange(p.id, '')}
-                                                        aria-label="Limpar data"
-                                                        title="Limpar data"
-                                                    >
-                                                        &times;
-                                                    </button>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <span className="table-date-highlight">{formatDateDdMmYy(patientData.altaReplan)}</span>
-                                        )}
-                                    </td>
+                                    <td>{p.leitoHoje}</td>
+                                    <td>{p.tipoInternacao}</td>
+                                    <td>{formatDateDdMmYy(p.dataIH)}</td>
+                                    <td>{formatDateDdMmYy(p.altaPrev)}</td>
                                 </tr>
                             );
                         })}

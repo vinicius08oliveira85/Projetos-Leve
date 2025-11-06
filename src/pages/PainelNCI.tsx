@@ -153,7 +153,6 @@ const PainelNCI = ({ onBack, title, subtitle }: { onBack: () => void; title: str
                                 <thead>
                                 <tr>
                                     <th>NOME</th>
-                                    <th>CPF</th>
                                     <th>PROGRAMA</th>
                                     <th>HOSPITAL IH</th>
                                     <th>DATA IH</th>
@@ -168,7 +167,6 @@ const PainelNCI = ({ onBack, title, subtitle }: { onBack: () => void; title: str
                                 {internadosPorProgramaData.map((row, index) => (
                                     <tr key={index}>
                                         <td>{row.nome}</td>
-                                        <td>{row.cpf}</td>
                                         <td>{row.programa}</td>
                                         <td>{row.hospital}</td>
                                         <td>{row.dataIh}</td>

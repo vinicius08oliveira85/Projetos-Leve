@@ -305,10 +305,6 @@ const PatientDetails = ({ patient: initialPatient, allPatients, onBack, user, on
                                 <input type="text" value={patient.nome} disabled />
                             </div>
                             <div className="form-group">
-                                <label>CPF</label>
-                                <input type="text" value={patient.cpf} disabled />
-                            </div>
-                            <div className="form-group">
                                 <label>Dia IH (Data)</label>
                                 <input type="text" value={formatDateDdMmYy(patient.dataIH)} disabled />
                             </div>
@@ -376,10 +372,6 @@ const PatientDetails = ({ patient: initialPatient, allPatients, onBack, user, on
                             <div className="form-group">
                                 <label>Paciente</label>
                                 <input type="text" value={patient.nome} disabled />
-                            </div>
-                            <div className="form-group">
-                                <label>CPF</label>
-                                <input type="text" value={patient.cpf} disabled />
                             </div>
                             <div className="form-group">
                                 <label>Leito Ontem</label>

@@ -53,7 +53,6 @@ const PacientesAguardandoExame = ({ onBack, onViewDetails, user, patients, onSav
                     <thead>
                         <tr>
                             <th>Hospital IH</th>
-                            <th>CPF</th>
                             <th>Paciente</th>
                             <th>Data IH</th>
                             <th>Previsão de Alta</th>
@@ -71,7 +70,6 @@ const PacientesAguardandoExame = ({ onBack, onViewDetails, user, patients, onSav
                             return (
                                 <tr key={p.id}>
                                     <td>{patientData.hospitalDestino}</td>
-                                    <td>{patientData.cpf}</td>
                                     <td>{patientData.nome}</td>
                                     <td>{formatDateDdMmYy(patientData.dataIH)}</td>
                                     <td>{formatDateDdMmYy(patientData.altaPrev)}</td>
