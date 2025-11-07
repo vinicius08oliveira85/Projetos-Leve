@@ -1053,59 +1053,17 @@ legend {
 }
 .espera-cards-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 24px;
-}
-.espera-card {
-    background-color: var(--background-color);
-    padding: 16px;
-    border-radius: 12px;
-    text-align: center;
-    border: 1px solid var(--border-color);
-    transition: all 0.2s ease-in-out;
-    cursor: pointer;
-}
-.espera-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-    border-color: var(--primary-color);
-}
-.espera-card.active {
-    border-color: var(--secondary-color);
-    transform: translateY(-4px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-}
-.espera-card h3 {
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 12px;
-}
-.espera-card .count {
-    font-size: 42px;
-    font-weight: 700;
-    color: var(--primary-color);
-    margin-bottom: 12px;
-}
-.espera-card .details-button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--light-text-color);
-    padding: 0;
 }
 .espera-filter-bar {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 16px;
     background-color: var(--white-color);
     padding: 16px;
     border-radius: 12px 12px 0 0;
     border-bottom: 1px solid var(--border-color);
-}
-.filter-controls {
-    display: flex;
-    gap: 24px;
-    align-items: center;
 }
 .espera-filter-bar .section-title {
     font-size: 18px;
@@ -1869,6 +1827,117 @@ legend {
     text-align: center;
     font-weight: 600;
 }
+
+.patient-table .pendencias-cell {
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+/* New Card styles for Mapa de Espera based on image */
+.espera-card-new {
+    background-color: var(--white-color);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.espera-card-new:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.07);
+}
+
+.espera-card-new.active {
+    border: 2px solid var(--primary-color);
+    padding: 19px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.07);
+    transform: translateY(-4px);
+}
+
+.espera-card-new .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.espera-card-new .icon-background {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.espera-card-new .icon-background svg {
+    width: 20px;
+    height: 20px;
+}
+
+.espera-card-new .view-icon {
+    color: var(--light-text-color);
+}
+
+.espera-card-new .card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.espera-card-new .card-body .title {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.espera-card-new .card-body .count-wrapper {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.espera-card-new .card-body .count-number {
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.espera-card-new .card-body .count-label {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--light-text-color);
+}
+
+.espera-card-new .card-body .subtitle {
+    font-size: 14px;
+    color: var(--light-text-color);
+}
+
+/* Theme colors for new espera cards */
+.espera-card-new.theme-blue .icon-background { background-color: #e0e7ff; }
+.espera-card-new.theme-blue .icon-background svg { color: #4338ca; }
+.espera-card-new.theme-blue .count-number { color: #4338ca; }
+
+.espera-card-new.theme-purple .icon-background { background-color: #f3e8ff; }
+.espera-card-new.theme-purple .icon-background svg { color: #7e22ce; }
+.espera-card-new.theme-purple .count-number { color: #7e22ce; }
+
+.espera-card-new.theme-orange .icon-background { background-color: #fff1e6; }
+.espera-card-new.theme-orange .icon-background svg { color: #d9591e; }
+.espera-card-new.theme-orange .count-number { color: #d9591e; }
+
+.espera-card-new.theme-green .icon-background { background-color: #e6f7f0; }
+.espera-card-new.theme-green .icon-background svg { color: #059669; }
+.espera-card-new.theme-green .count-number { color: #059669; }
+
 
 
 /* --- Responsive Design --- */

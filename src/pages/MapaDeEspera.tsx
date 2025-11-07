@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
-import { Patient, User, Esperas, EsperaCirurgiaDetalhes, EsperaExameDetalhes, EsperaParecerDetalhes, EsperaDesospitalizacaoDetalhes } from '../types/index.ts';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { Patient, User, Esperas, HistoryEntry, EsperaCirurgiaDetalhes, EsperaExameDetalhes, EsperaParecerDetalhes, EsperaDesospitalizacaoDetalhes } from '../types/index.ts';
+import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import AppHeader from '../components/AppHeader.tsx';
-import { formatDateDdMmYy, calculateDaysWaiting, calculateDaysBetween } from '../utils/helpers.ts';
+import { formatDateDdMmYy, calculateDaysWaiting, calculateDaysBetween, createBlob } from '../utils/helpers.ts';
 
 const criticidadeDisplayMap: { [key in Patient['criticidade']]: string } = {
     'Revisão Padrão': '0',
@@ -370,6 +371,219 @@ const DetalhesEsperaDesospitalizacaoModal = ({ patient, onClose, user, onUpdateP
     );
 };
 
+const ObservacoesModal = ({ patient: initialPatient, onClose, user, onUpdatePatient, showToast }: {
+    patient: Patient;
+    onClose: () => void;
+    user: User;
+    onUpdatePatient: (patient: Patient, user: User) => void;
+    showToast: (message: string, type?: 'success' | 'error') => void;
+}) => {
+    const [patient, setPatient] = useState<Patient>(initialPatient);
+    const [isRecording, setIsRecording] = useState(false);
+    const [diarioText, setDiarioText] = useState('');
+    const [newHistoryDate, setNewHistoryDate] = useState('');
+
+    const sessionPromiseRef = useRef<Promise<any> | null>(null);
+    const streamRef = useRef<MediaStream | null>(null);
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
+    const mediaStreamSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+    const accumulatedTranscriptionRef = useRef('');
+
+    useEffect(() => {
+        return () => {
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop());
+            }
+            if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+                audioContextRef.current.close();
+            }
+            if (sessionPromiseRef.current) {
+                sessionPromiseRef.current.then(session => session?.close());
+            }
+        };
+    }, []);
+
+    const handleToggleRecording = async () => {
+        if (isRecording) {
+            setIsRecording(false);
+            streamRef.current?.getTracks().forEach(track => track.stop());
+            if (scriptProcessorRef.current && mediaStreamSourceRef.current && audioContextRef.current) {
+                mediaStreamSourceRef.current.disconnect(scriptProcessorRef.current);
+                scriptProcessorRef.current.disconnect(audioContextRef.current.destination);
+            }
+            if (audioContextRef.current?.state !== 'closed') {
+                await audioContextRef.current?.close();
+            }
+            if (sessionPromiseRef.current) {
+                const session = await sessionPromiseRef.current;
+                session.close();
+                sessionPromiseRef.current = null;
+            }
+        } else {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                streamRef.current = stream;
+                setIsRecording(true);
+                setDiarioText("Iniciando gravação...");
+                accumulatedTranscriptionRef.current = '';
+
+                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+                
+                const sessionPromise = ai.live.connect({
+                    model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+                    callbacks: {
+                        onopen: () => {
+                            setDiarioText("Conectado. Pode falar agora...");
+                            const context = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+                            audioContextRef.current = context;
+                            mediaStreamSourceRef.current = context.createMediaStreamSource(stream);
+                            const processor = context.createScriptProcessor(4096, 1, 1);
+                            scriptProcessorRef.current = processor;
+                            processor.onaudioprocess = (audioProcessingEvent) => {
+                                const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
+                                const pcmBlob = createBlob(inputData);
+                                sessionPromise.then((session) => {
+                                    session.sendRealtimeInput({ media: pcmBlob });
+                                });
+                            };
+                            mediaStreamSourceRef.current.connect(processor);
+                            processor.connect(context.destination);
+                        },
+                        onmessage: (message: LiveServerMessage) => {
+                            if (message.serverContent?.inputTranscription) {
+                                const text = message.serverContent.inputTranscription.text;
+                                accumulatedTranscriptionRef.current += text;
+                                setDiarioText(accumulatedTranscriptionRef.current);
+                            }
+                        },
+                        onerror: (e: ErrorEvent) => {
+                            console.error('Session error', e);
+                            setDiarioText("Erro na gravação. Tente novamente.");
+                            if(isRecording) handleToggleRecording();
+                        },
+                        onclose: () => {
+                           setDiarioText(accumulatedTranscriptionRef.current);
+                        },
+                    },
+                    config: {
+                        responseModalities: [Modality.AUDIO],
+                        inputAudioTranscription: {},
+                    },
+                });
+                sessionPromiseRef.current = sessionPromise;
+
+            } catch (error) {
+                console.error('Error getting user media or starting session', error);
+                showToast('Não foi possível acessar o microfone. Por favor, verifique as permissões.', 'error');
+                setIsRecording(false);
+                setDiarioText("");
+            }
+        }
+    };
+
+    const handleHistorySubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        
+        if (newHistoryDate && diarioText) {
+             const newEntry: HistoryEntry = {
+                data: newHistoryDate,
+                responsavel: user.name,
+                diario: diarioText,
+            };
+            const updatedPatient = {
+                ...patient,
+                historico: [...patient.historico, newEntry]
+            };
+            setPatient(updatedPatient); // Update local state for immediate feedback
+            onUpdatePatient(updatedPatient, user);
+            setNewHistoryDate('');
+            setDiarioText('');
+            showToast('Anotação adicionada com sucesso!');
+        }
+    };
+
+    return (
+        <div className="modal-overlay">
+            <div className="leito-modal-content" style={{ maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto' }}>
+                <div className="leito-modal-header">
+                    <h3>Histórico e Anotações - {patient.nome}</h3>
+                    <button onClick={onClose} className="leito-modal-close-btn">&times;</button>
+                </div>
+                <div className="leito-modal-body" style={{ marginTop: '20px' }}>
+                    <fieldset>
+                        <legend>Histórico de Alterações / Anotações</legend>
+                        <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '20px' }}>
+                            <table className="history-table">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Responsável</th>
+                                        <th>Diário de Internação</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {patient.historico.map((item, index) => (
+                                        <tr key={index}>
+                                            <td>{formatDateDdMmYy(item.data)}</td>
+                                            <td>{item.responsavel}</td>
+                                            <td>{item.diario}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </fieldset>
+                    {user.role === 'admin' && (
+                        <fieldset>
+                            <legend>Resumo clínico</legend>
+                            <form className="add-history-form" onSubmit={handleHistorySubmit}>
+                                <div className="history-form-grid">
+                                    <div className="form-group">
+                                        <label>Data Auditoria</label>
+                                        <div className="date-input-wrapper">
+                                            <input type="date" name="data" required value={newHistoryDate} onChange={(e) => setNewHistoryDate(e.target.value)} />
+                                            {newHistoryDate && (
+                                                <button type="button" className="clear-date-button" onClick={() => setNewHistoryDate('')} title="Limpar data">&times;</button>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Responsável</label>
+                                        <input type="text" name="responsavel" value={user.name} disabled />
+                                    </div>
+                                    <div className="form-group full-width">
+                                        <label>Diário de Internação</label>
+                                        <div className="textarea-with-mic">
+                                            <textarea 
+                                                name="diario" 
+                                                rows={3} 
+                                                required 
+                                                value={diarioText} 
+                                                onChange={(e) => setDiarioText(e.target.value)}
+                                                disabled={isRecording}
+                                                placeholder={isRecording ? "" : "Digite ou grave o resumo clínico..."}
+                                            />
+                                            <button type="button" className={`mic-button ${isRecording ? 'recording' : ''}`} onClick={handleToggleRecording} aria-label={isRecording ? 'Parar gravação' : 'Iniciar gravação'}>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="submit" className="add-history-btn">Adicionar Anotação</button>
+                            </form>
+                        </fieldset>
+                    )}
+                </div>
+                 <div className="modal-actions" style={{ paddingTop: '20px' }}>
+                     <button onClick={onClose} className="modal-button cancel">Fechar</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
 interface MapaDeEsperaProps {
     onBack: () => void;
     onSelectPatient: (patient: Patient) => void;
@@ -377,20 +591,47 @@ interface MapaDeEsperaProps {
     patients: Patient[];
     onUpdatePatient: (patient: Patient, user: User) => void;
     onSavePatients: (patients: Patient[], user: User) => void;
-    showToast: (message: string) => void;
+    showToast: (message: string, type?: 'success' | 'error') => void;
     title: string;
     subtitle: string;
 }
 
 const MapaDeEspera = ({ onBack, onSelectPatient, user, patients, onUpdatePatient, onSavePatients, showToast, title, subtitle }: MapaDeEsperaProps) => {
-    const [hospitalFilter, setHospitalFilter] = useState('Todos');
+    // Applied filters
+    const [hospitalFilter, setHospitalFilter] = useState<string[]>([]);
     const [leitoFilter, setLeitoFilter] = useState('Todos');
+    const [altaReplanFilter, setAltaReplanFilter] = useState<'Todos' | 'Com Alta Replan' | 'Sem Alta Replan'>('Todos');
+    const [nameSearch, setNameSearch] = useState('');
+    
+    // Temporary filters for UI
+    const [tempHospitalFilter, setTempHospitalFilter] = useState<string[]>([]);
+    const [tempLeitoFilter, setTempLeitoFilter] = useState('Todos');
+    const [tempAltaReplanFilter, setTempAltaReplanFilter] = useState<'Todos' | 'Com Alta Replan' | 'Sem Alta Replan'>('Todos');
+    const [tempNameSearch, setTempNameSearch] = useState('');
+
+    // Dropdown visibility
+    const [isHospitalDropdownOpen, setIsHospitalDropdownOpen] = useState(false);
+    const hospitalDropdownRef = useRef<HTMLDivElement>(null);
+    
     const [activeFilter, setActiveFilter] = useState<keyof Esperas | null>(null);
     
     const [selectedSurgeryPatient, setSelectedSurgeryPatient] = useState<Patient | null>(null);
     const [selectedExamPatient, setSelectedExamPatient] = useState<Patient | null>(null);
     const [selectedParecerPatient, setSelectedParecerPatient] = useState<Patient | null>(null);
     const [selectedDesospitalizacaoPatient, setSelectedDesospitalizacaoPatient] = useState<Patient | null>(null);
+    const [observacoesPatient, setObservacoesPatient] = useState<Patient | null>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (hospitalDropdownRef.current && !hospitalDropdownRef.current.contains(event.target as Node)) {
+                setIsHospitalDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
 
     const esperaCounts = useMemo(() => {
@@ -403,16 +644,19 @@ const MapaDeEspera = ({ onBack, onSelectPatient, user, patients, onUpdatePatient
         }, { cirurgia: 0, exame: 0, parecer: 0, desospitalizacao: 0 });
     }, [patients]);
 
-    const uniqueHospitals = useMemo(() => ['Todos', ...new Set(patients.map(p => p.hospitalDestino))], [patients]);
+    const uniqueHospitals = useMemo(() => [...new Set(patients.map(p => p.hospitalDestino))], [patients]);
     const leitos = ['Todos', 'CTI', 'CTI PED', 'CTI NEO', 'USI', 'USI PED', 'UI', 'UI PSQ'];
     
     const handleCardClick = (type: keyof Esperas) => {
-        setActiveFilter(prev => (prev === type ? null : type));
+        const newFilter = activeFilter === type ? null : type;
+        setActiveFilter(newFilter);
+        // Reset filters when changing main category
+        handleClearFilters();
     };
 
     const filteredPatients = useMemo(() => {
         return patients.filter(p => {
-            const hospitalMatch = hospitalFilter === 'Todos' || p.hospitalDestino === hospitalFilter;
+            const hospitalMatch = hospitalFilter.length === 0 || hospitalFilter.includes(p.hospitalDestino);
             const leitoMatch = leitoFilter === 'Todos' || p.leitoHoje === leitoFilter;
 
             if (!hospitalMatch || !leitoMatch) {
@@ -423,9 +667,44 @@ const MapaDeEspera = ({ onBack, onSelectPatient, user, patients, onUpdatePatient
                 return p.esperas[activeFilter];
             }
             
-            return p.esperas.cirurgia || p.esperas.exame || p.esperas.parecer || p.esperas.desospitalizacao;
+            // Visão Geral filters
+            const isWaiting = p.esperas.cirurgia || p.esperas.exame || p.esperas.parecer || p.esperas.desospitalizacao;
+            if (!isWaiting) return false;
+
+            const altaReplanMatch = altaReplanFilter === 'Todos' || 
+                                   (altaReplanFilter === 'Com Alta Replan' && !!p.altaReplan) || 
+                                   (altaReplanFilter === 'Sem Alta Replan' && !p.altaReplan);
+            const nameMatch = nameSearch === '' || p.nome.toLowerCase().includes(nameSearch.toLowerCase());
+            
+            return altaReplanMatch && nameMatch;
         });
-    }, [patients, hospitalFilter, leitoFilter, activeFilter]);
+    }, [patients, hospitalFilter, leitoFilter, activeFilter, altaReplanFilter, nameSearch]);
+
+    const handleApplyFilters = () => {
+        setHospitalFilter(tempHospitalFilter);
+        setLeitoFilter(tempLeitoFilter);
+        setAltaReplanFilter(tempAltaReplanFilter);
+        setNameSearch(tempNameSearch);
+    };
+    
+    const handleClearFilters = () => {
+        setTempHospitalFilter([]);
+        setTempLeitoFilter('Todos');
+        setTempAltaReplanFilter('Todos');
+        setTempNameSearch('');
+        
+        setHospitalFilter([]);
+        setLeitoFilter('Todos');
+        setAltaReplanFilter('Todos');
+        setNameSearch('');
+    };
+    
+    const handleHospitalMultiChange = (hospital: string) => {
+        setTempHospitalFilter(prev => {
+            const isSelected = prev.includes(hospital);
+            return isSelected ? prev.filter(s => s !== hospital) : [...prev, hospital];
+        });
+    };
 
     const getListTitle = () => {
         if (!activeFilter) return "Visão Geral de Esperas";
@@ -438,15 +717,69 @@ const MapaDeEspera = ({ onBack, onSelectPatient, user, patients, onUpdatePatient
         }
     };
     
-    const EsperaCard = ({ title, count, type, onClick, isActive }: { title: string, count: number, type: keyof Esperas, onClick: (type: keyof Esperas) => void, isActive: boolean }) => (
-        <div className={`espera-card ${isActive ? 'active' : ''}`} onClick={() => onClick(type)}>
-            <h3>{title}</h3>
-            <div className="count">{count}</div>
-            <div className="details-button" aria-label={`Filtrar por ${title}`}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+    const EsperaCard = ({ type, count, onClick, isActive }: { type: keyof Esperas; count: number; onClick: (type: keyof Esperas) => void; isActive: boolean }) => {
+    
+        // Fix: Changed JSX.Element to React.ReactElement to resolve 'Cannot find namespace JSX' error.
+        const cardConfig: Record<keyof Esperas, { title: string; subtitle: string; theme: string; icon: React.ReactElement; }> = {
+            cirurgia: {
+                title: 'Cirurgia',
+                subtitle: 'Aguardando procedimento',
+                theme: 'blue',
+                icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            },
+            exame: {
+                title: 'Exame',
+                subtitle: 'Aguardando resultado',
+                theme: 'purple',
+                icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            },
+            parecer: {
+                title: 'Parecer',
+                subtitle: 'Avaliação médica',
+                theme: 'orange',
+                icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            },
+            desospitalizacao: {
+                title: 'Desospitalização',
+                subtitle: 'Preparação alta',
+                theme: 'green',
+                icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            }
+        };
+        
+        const config = cardConfig[type];
+    
+        return (
+            <div className={`espera-card-new theme-${config.theme} ${isActive ? 'active' : ''}`} onClick={() => onClick(type)}>
+                <div className="card-header">
+                    <div className="icon-background">
+                        {config.icon}
+                    </div>
+                    <div className="view-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    </div>
+                </div>
+                <div className="card-body">
+                    <span className="title">{config.title}</span>
+                    <div className="count-wrapper">
+                        <span className="count-number">{count}</span>
+                        <span className="count-label">pacientes</span>
+                    </div>
+                    <span className="subtitle">{config.subtitle}</span>
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
+
+    const PendenciasEsperaList = ({ esperas }: { esperas: Esperas }) => {
+        const activeEsperas = [];
+        if (esperas.cirurgia) activeEsperas.push('Cirurgia');
+        if (esperas.exame) activeEsperas.push('Exame');
+        if (esperas.parecer) activeEsperas.push('Parecer');
+        if (esperas.desospitalizacao) activeEsperas.push('Desospitalização');
+        return <span>{activeEsperas.join(', ')}</span>;
+    };
+
 
     const renderPatientTable = () => {
         if (!activeFilter) {
@@ -454,35 +787,47 @@ const MapaDeEspera = ({ onBack, onSelectPatient, user, patients, onUpdatePatient
                 <table className="patient-table">
                    <thead>
                         <tr>
-                            <th>HOSPITAL IH</th>
-                            <th>PACIENTE</th>
                             <th>DETALHES</th>
+                            <th>GUIA</th>
+                            <th>NOME DO PACIENTE</th>
+                            <th>DATA IH</th>
+                            <th>ALTA PREVISTA</th>
+                            <th>ALTA REPLAN</th>
                             <th>CRITICIDADE</th>
-                            <th>LEITO</th>
-                            <th>TIPO</th>
-                            <th>INTERNAÇÃO</th>
-                            <th>PREVISÃO DE ALTA</th>
+                            <th>HOSPITAL DESTINO</th>
+                            <th>LEITO DO DIA</th>
+                            <th>PENDÊNCIAS E ESPERA</th>
+                            <th>OBSERVAÇÕES</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredPatients.map(p => (
                             <tr key={p.id}>
-                                <td>{p.hospitalDestino}</td>
-                                <td>{p.nome}</td>
                                 <td>
-                                    <button className="icon-button" onClick={() => onSelectPatient(p)} aria-label={`Detalhes de ${p.nome}`}>
+                                    <button className="icon-button" onClick={() => onSelectPatient(p)} aria-label={`Detalhes de ${p.nome}`} title="Acessar Detalhes da Guia">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                                     </button>
                                 </td>
+                                <td>{p.guia}</td>
+                                <td>{p.nome}</td>
+                                <td>{formatDateDdMmYy(p.dataIH)}</td>
+                                <td>{formatDateDdMmYy(p.altaPrev)}</td>
+                                <td>{formatDateDdMmYy(p.altaReplan)}</td>
                                 <td>
                                     <span style={p.criticidade === 'Revisão Padrão' ? {} : { color: 'var(--status-red-text)', fontWeight: 'bold' }}>
                                         {criticidadeDisplayMap[p.criticidade]}
                                     </span>
                                 </td>
+                                <td>{p.hospitalDestino}</td>
                                 <td>{p.leitoHoje}</td>
-                                <td>{p.tipoInternacao}</td>
-                                <td>{formatDateDdMmYy(p.dataIH)}</td>
-                                <td>{formatDateDdMmYy(p.altaPrev)}</td>
+                                <td className="pendencias-cell" title={(Object.keys(p.esperas) as Array<keyof Esperas>).filter(k => p.esperas[k]).join(', ')}>
+                                    <PendenciasEsperaList esperas={p.esperas} />
+                                </td>
+                                <td>
+                                    <button className="icon-button" onClick={() => setObservacoesPatient(p)} aria-label={`Observações de ${p.nome}`} title="Ver/Adicionar Observações">
+                                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                                    </button>
+                                </td>
                             </tr>
                         ))}
                     </tbody>
@@ -585,27 +930,74 @@ const MapaDeEspera = ({ onBack, onSelectPatient, user, patients, onUpdatePatient
             <div className="content-box">
                 <h2 className="section-title-box">Pacientes em espera</h2>
                 <div className="espera-cards-container">
-                    <EsperaCard title="Cirurgia" count={esperaCounts.cirurgia} type="cirurgia" onClick={handleCardClick} isActive={activeFilter === 'cirurgia'} />
-                    <EsperaCard title="Exame" count={esperaCounts.exame} type="exame" onClick={handleCardClick} isActive={activeFilter === 'exame'} />
-                    <EsperaCard title="Parecer" count={esperaCounts.parecer} type="parecer" onClick={handleCardClick} isActive={activeFilter === 'parecer'} />
-                    <EsperaCard title="Desospitalização" count={esperaCounts.desospitalizacao} type="desospitalizacao" onClick={handleCardClick} isActive={activeFilter === 'desospitalizacao'} />
+                    <EsperaCard count={esperaCounts.cirurgia} type="cirurgia" onClick={handleCardClick} isActive={activeFilter === 'cirurgia'} />
+                    <EsperaCard count={esperaCounts.exame} type="exame" onClick={handleCardClick} isActive={activeFilter === 'exame'} />
+                    <EsperaCard count={esperaCounts.parecer} type="parecer" onClick={handleCardClick} isActive={activeFilter === 'parecer'} />
+                    <EsperaCard count={esperaCounts.desospitalizacao} type="desospitalizacao" onClick={handleCardClick} isActive={activeFilter === 'desospitalizacao'} />
                 </div>
             </div>
 
-            <div className="espera-filter-bar">
-                <h2 className="section-title">{getListTitle()}</h2>
+            <div className="filter-bar" style={{ marginBottom: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, borderBottom: '1px solid var(--border-color)', flexDirection: 'column', alignItems: 'stretch', gap: '16px'}}>
+                <div style={{width: '100%'}}>
+                    <h2 className="section-title" style={{color: 'var(--primary-color)', margin: 0, paddingBottom: '8px'}}>{getListTitle()}</h2>
+                </div>
                 <div className="filter-controls">
-                    <div className="form-group">
-                        <label>Hospital IH:</label>
-                        <select value={hospitalFilter} onChange={(e) => setHospitalFilter(e.target.value)}>
-                            {uniqueHospitals.map(h => <option key={h} value={h}>{h}</option>)}
-                        </select>
+                    <div className="form-group" ref={hospitalDropdownRef}>
+                        <label>Hospital Destino:</label>
+                         <div className="multi-select-dropdown">
+                            <button type="button" className="multi-select-dropdown-button" onClick={() => setIsHospitalDropdownOpen(prev => !prev)}>
+                                {tempHospitalFilter.length === 0 ? 'Todos' : tempHospitalFilter.length === 1 ? tempHospitalFilter[0] : `${tempHospitalFilter.length} selecionados`}
+                            </button>
+                            {isHospitalDropdownOpen && (
+                                <div className="multi-select-dropdown-menu">
+                                    {uniqueHospitals.map(h => (
+                                        <label key={h} className="multi-select-dropdown-item">
+                                            <input type="checkbox" checked={tempHospitalFilter.includes(h)} onChange={() => handleHospitalMultiChange(h)} /> {h}
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                     <div className="form-group">
-                        <label>Leito:</label>
-                        <select value={leitoFilter} onChange={(e) => setLeitoFilter(e.target.value)}>
+                        <label>Leito do dia:</label>
+                        <select value={tempLeitoFilter} onChange={(e) => setTempLeitoFilter(e.target.value)}>
                             {leitos.map(l => <option key={l} value={l}>{l}</option>)}
                         </select>
+                    </div>
+                     {activeFilter === null && (
+                        <div className="form-group">
+                            <label>Alta Replan:</label>
+                            <select value={tempAltaReplanFilter} onChange={(e) => setTempAltaReplanFilter(e.target.value as any)}>
+                                <option value="Todos">Todos</option>
+                                <option value="Com Alta Replan">Com Alta Replan</option>
+                                <option value="Sem Alta Replan">Sem Alta Replan</option>
+                            </select>
+                        </div>
+                    )}
+                </div>
+                {activeFilter === null && (
+                     <div>
+                        <div className="form-group">
+                            <label>Buscar por Nome:</label>
+                            <input
+                                type="text"
+                                placeholder="Digite o nome do paciente..."
+                                value={tempNameSearch}
+                                onChange={(e) => setTempNameSearch(e.target.value)}
+                                style={{width: '100%'}}
+                            />
+                        </div>
+                    </div>
+                )}
+                 <div className="filter-actions-wrapper">
+                    <div className="filter-actions">
+                        <button onClick={handleClearFilters} className="secondary-action-button">Limpar</button>
+                        <button onClick={handleApplyFilters} className="save-button">Aplicar Filtros</button>
+                    </div>
+                    <div className="filter-totalizer">
+                        <span className="totalizer-label">TOTAL</span>
+                        <span className="totalizer-value">{filteredPatients.length}</span>
                     </div>
                 </div>
             </div>
@@ -644,6 +1036,15 @@ const MapaDeEspera = ({ onBack, onSelectPatient, user, patients, onUpdatePatient
                 <DetalhesEsperaDesospitalizacaoModal 
                     patient={selectedDesospitalizacaoPatient}
                     onClose={() => setSelectedDesospitalizacaoPatient(null)}
+                    user={user}
+                    onUpdatePatient={onUpdatePatient}
+                    showToast={showToast}
+                />
+            )}
+             {observacoesPatient && (
+                <ObservacoesModal 
+                    patient={observacoesPatient}
+                    onClose={() => setObservacoesPatient(null)}
                     user={user}
                     onUpdatePatient={onUpdatePatient}
                     showToast={showToast}
