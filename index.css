@@ -1938,65 +1938,70 @@ legend {
 .espera-card-new.theme-green .icon-background svg { color: #059669; }
 .espera-card-new.theme-green .count-number { color: #059669; }
 
-/* --- DADOS DE HOSPITALIZAÇÃO DASHBOARD (APP STYLE) --- */
+/* --- DADOS DE HOSPITALIZAÇÃO DASHBOARD (COMPACT STYLE) --- */
 .dados-hospitalizacao-grid {
     display: grid;
     grid-template-columns: repeat(12, 1fr);
-    gap: 24px;
+    gap: 12px;
+}
+
+.dh-left-column {
+    grid-column: span 4;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.dh-right-column {
+    grid-column: span 8;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .dh-widget {
     background-color: var(--white-color);
     border-radius: 12px;
-    padding: 20px;
+    padding: 12px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
     border: 1px solid var(--border-color);
-    grid-column: span 12; /* Default to full width */
+    display: flex;
+    flex-direction: column;
 }
 
 .dh-widget-title {
-    font-size: 18px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--primary-color);
-    margin-bottom: 16px;
-    padding-bottom: 12px;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
     border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
 }
 
 .dh-widget-content {
     overflow-x: auto;
+    flex-grow: 1;
 }
-
-.dh-span-3 { grid-column: span 3; }
-.dh-span-4 { grid-column: span 4; }
-.dh-span-5 { grid-column: span 5; }
-.dh-span-6 { grid-column: span 6; }
-.dh-span-7 { grid-column: span 7; }
-.dh-span-8 { grid-column: span 8; }
-.dh-span-12 { grid-column: span 12; }
-
 
 .dh-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 14px;
+    font-size: 12px;
+    border: 1px solid var(--border-color);
 }
 
 .dh-table th,
 .dh-table td {
-    padding: 10px 8px;
+    padding: 6px;
     text-align: left;
-    border-bottom: 1px solid var(--border-color);
+    border: 1px solid var(--border-color);
 }
 
 .dh-table th {
-    font-weight: 500;
-    color: var(--light-text-color);
-    background-color: #f9fafb;
-}
-
-.dh-table tbody tr:last-child td {
-    border-bottom: none;
+    font-weight: 600;
+    color: var(--text-color);
+    background-color: #e9ecef;
 }
 
 .dh-table .text-right { text-align: right; }
@@ -2004,24 +2009,26 @@ legend {
 .dh-table .highlight-green { color: var(--success-color); font-weight: 600; }
 
 .dh-chart-container {
-    padding: 10px;
-    margin-top: 16px;
+    padding: 8px 0;
+    margin-top: 8px;
 }
 
 .dh-chart-bars {
     display: flex;
     justify-content: space-around;
     align-items: flex-end;
-    height: 120px;
+    height: 80px;
     border-bottom: 2px solid var(--border-color);
     position: relative;
+    padding-top: 16px;
+    padding-bottom: 16px;
 }
 
 .dh-chart-bar-group {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .dh-chart-bar-inner {
@@ -2032,59 +2039,52 @@ legend {
 }
 
 .dh-chart-bar {
-    width: 25px;
+    width: 20px;
     background-color: var(--primary-color);
     position: relative;
-    border-radius: 4px 4px 0 0;
+    border-radius: 3px 3px 0 0;
 }
 
 .dh-chart-bar.result-bar {
-    background-color: var(--secondary-color);
-    width: 18px;
+    background-color: #f97316;
+    width: 15px;
 }
 
-.dh-chart-bar.negative {
-    background-color: var(--warning-color);
-    position: absolute;
-    bottom: -2px; /* Position below the line */
-    transform: translateY(100%);
-    border-radius: 0 0 4px 4px;
+.dh-chart-bar.result-bar.negative {
+    align-self: flex-start;
+    background-color: #f59e0b;
+    border-radius: 0 0 3px 3px;
 }
 
-.dh-chart-bar .bar-label-top {
-    position: absolute;
-    top: -22px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-color);
-}
-
-.dh-chart-bar .bar-label-bottom {
-    position: absolute;
-    bottom: -22px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 12px;
+.dh-chart-bar-group .bar-label-bottom {
+    font-size: 10px;
     font-weight: 500;
     color: var(--light-text-color);
+}
+.dh-chart-bar .bar-label-top {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-color);
 }
 
 .dh-chart-bar .bar-label-side {
     position: absolute;
     left: 100%;
-    margin-left: 5px;
-    font-size: 12px;
+    margin-left: 4px;
+    font-size: 10px;
     font-weight: 600;
     white-space: nowrap;
 }
 .dh-chart-bar .bar-label-side.positive {
-    bottom: 5px;
+    bottom: 2px;
     color: var(--success-color);
 }
-.dh-chart-bar .bar-label-side.negative {
-    top: 5px;
+.dh-chart-bar.negative .bar-label-side.negative {
+    top: 2px;
     color: var(--error-color);
 }
 
@@ -2267,8 +2267,4 @@ legend {
     .dados-hospitalizacao-grid {
         grid-template-columns: 1fr;
     }
-    .dh-widget {
-        grid-column: 1 / -1 !important; /* Force full width on mobile */
-    }
-
 }

@@ -59,14 +59,14 @@ const DadosHospitalizacaoDashboard = () => {
     ];
     
     const BarChart = ({ meta, metaCti, pctMeta, pctMetaCti }: typeof metaData) => {
-        const maxBarHeight = 100; // in px
+        const maxBarHeight = 60; // in px, compacted
         const maxMetaValue = Math.max(meta, metaCti, 1);
         
         const metaHeight = (meta / maxMetaValue) * maxBarHeight;
         const metaCtiHeight = (metaCti / maxMetaValue) * maxBarHeight;
 
-        const resultMetaHeight = Math.min(Math.abs(pctMeta) * 2, maxBarHeight);
-        const resultMetaCtiHeight = Math.min(Math.abs(pctMetaCti) * 2, maxBarHeight);
+        const resultMetaHeight = Math.min(Math.abs(pctMeta) * 1.5, maxBarHeight);
+        const resultMetaCtiHeight = Math.min(Math.abs(pctMetaCti) * 1.5, maxBarHeight);
 
         return (
             <div className="dh-chart-container">
@@ -87,7 +87,10 @@ const DadosHospitalizacaoDashboard = () => {
                             <div className="dh-chart-bar" style={{ height: `${metaCtiHeight}px` }}>
                                 <span className="bar-label-top">{metaCti.toFixed(2)}</span>
                             </div>
-                            <div className={`dh-chart-bar result-bar ${pctMetaCti < 0 ? 'negative' : ''}`} style={{ height: `${resultMetaCtiHeight}px` }}>
+                             <div 
+                                className={`dh-chart-bar result-bar ${pctMetaCti < 0 ? 'negative' : ''}`} 
+                                style={{ height: `${resultMetaCtiHeight}px` }}
+                            >
                                  <span className={`bar-label-side ${pctMetaCti < 0 ? 'negative' : 'positive'}`}>{pctMetaCti.toFixed(2)}%</span>
                             </div>
                         </div>
@@ -127,98 +130,93 @@ const DadosHospitalizacaoDashboard = () => {
             </div>
             
             <div className="dados-hospitalizacao-grid" style={{marginTop: '24px'}}>
-                <Widget title="Carteira" className="dh-span-12">
-                    <table className="dh-table">
-                        <thead><tr><th>CARTEIRA</th><th>TOTAL INTERNADO</th><th>RESULTADO</th><th>CTI</th><th>Média Mês</th><th>Média Mês CTI</th></tr></thead>
-                        <tbody><tr><td>{carteiraData.carteira}</td><td>{carteiraData.totalInternado}</td><td>{carteiraData.resultado}</td><td>{carteiraData.cti}</td><td>{carteiraData.mediaMes}</td><td>{carteiraData.mediaMesCti}</td></tr></tbody>
-                    </table>
-                </Widget>
-
-                <Widget title="Internação por Rede" className="dh-span-6">
-                    <table className="dh-table">
-                        <thead><tr><th>INTERNAÇÃO POR REDE</th><th className="text-right">QTD. INTERNADO</th><th className="text-right">%OCUPAÇÃO</th></tr></thead>
-                        <tbody>{internacaoRedeData.map(d => <tr key={d.rede}><td>{d.rede}</td><td className="text-right">{d.qtd}</td><td className="text-right">{d.ocupacao}</td></tr>)}</tbody>
-                    </table>
-                </Widget>
-
-                 <Widget title="Natureza da Guia" className="dh-span-6">
-                    <table className="dh-table">
-                         <thead><tr><th>NATUREZA DA GUIA</th><th className="text-right">TOTAL</th><th className="text-right">PAC DIA</th></tr></thead>
-                         <tbody>
-                            {naturezaGuiaData.map((d, i) => <tr key={d.natureza}><td>{d.natureza}</td><td className="text-right">{d.total}</td><td className="text-right">{d.pacDia}</td></tr>)}
-                            <tr style={{fontWeight: 'bold', backgroundColor: '#f9fafb'}}><td >SOMA DIA</td><td className="text-right" colSpan={2}>2,52</td></tr>
-                         </tbody>
-                    </table>
-                </Widget>
-                
-                <Widget title="Regime" className="dh-span-3">
-                     <table className="dh-table">
-                         <thead><tr><th>REGIME</th><th className="text-right">QTD. INTERNADO</th></tr></thead>
-                         <tbody>{regimeData.map(d => <tr key={d.regime}><td>{d.regime}</td><td className="text-right">{d.qtd}</td></tr>)}</tbody>
-                     </table>
-                </Widget>
-                
-                 <Widget title="Leito" className="dh-span-3">
-                     <table className="dh-table">
-                         <thead><tr><th>LEITO</th><th className="text-right">QTD. INTERNADO</th></tr></thead>
-                         <tbody>{leitoData.map(d => <tr key={d.leito}><td>{d.leito}</td><td className="text-right">{d.qtd}</td></tr>)}</tbody>
-                     </table>
-                 </Widget>
-                 
-                <Widget title="Meta x Resultado" className="dh-span-6">
-                    <table className="dh-table">
-                        <thead>
-                            <tr>
-                                <th>Indicador</th>
-                                <th className="text-right">Meta</th>
-                                <th className="text-right">Resultado</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Meta</td>
-                                <td className="text-right">{metaData.meta.toFixed(2)}</td>
-                                <td className="text-right highlight-red">{metaData.pctMeta.toFixed(2)}%</td>
-                            </tr>
-                             <tr>
-                                <td>Meta CTI</td>
-                                <td className="text-right">{metaData.metaCti.toFixed(2)}</td>
-                                <td className="text-right highlight-green">{metaData.pctMetaCti.toFixed(2)}%</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <BarChart {...metaData} />
-                </Widget>
-
-                <Widget title="Região" className="dh-span-12">
-                     <table className="dh-table">
-                         <thead><tr><th>REGIÃO</th><th className="text-right">CARTEIRA</th><th className="text-right">QTD. INTERNADO</th><th className="text-right">CTI</th><th className="text-right">PAC DIA</th><th className="text-right">CTI</th></tr></thead>
-                         <tbody>{regiaoData.map(d => <tr key={d.regiao}><td>{d.regiao}</td><td className="text-right">{d.carteira}</td><td className="text-right">{d.qtd}</td><td className="text-right">{d.cti}</td><td className="text-right">{d.pacDia}</td><td className="text-right">{d.ctiPacDia}</td></tr>)}</tbody>
-                     </table>
-                </Widget>
-                
-                <Widget title="Produto Premium" className="dh-span-12">
-                      <table className="dh-table">
-                         <thead><tr><th>CARTEIRA</th><th className="text-right">QTD. INTERNADO</th><th className="text-right">CTI</th><th className="text-right">PAC DIA</th><th className="text-right">CTI</th></tr></thead>
-                         <tbody>
-                            {produtoPremiumData.map(d => <tr key={d.carteira}><td>{d.carteira}</td><td className="text-right">{d.qtd}</td><td className="text-right">{d.cti}</td><td className="text-right">{d.pacDia}</td><td className="text-right">{d.ctiPacDia}</td></tr>)}
-                         </tbody>
-                     </table>
-                </Widget>
-                
-                 <Widget title="Acompanhamento Diário de Solicitação" className="dh-span-12">
-                    <table className="dh-table">
-                        <thead><tr><th>DATA</th><th className="text-right">QTD. SOLICITAÇÃO</th><th className="text-right">LIBERADA</th><th className="text-right">NEGADA</th><th className="text-right">ELETIVO</th><th className="text-right">EVITADA</th><th className="text-right">ENTRADA</th><th className="text-right">SAIDA</th></tr></thead>
-                        <tbody>{solicitacaoData.map(d => <tr key={d.data}><td>{d.data}</td><td className="text-right">{d.qtd}</td><td className="text-right">{d.liberada}</td><td className="text-right">{d.negada}</td><td className="text-right">{d.eletivo}</td><td className="text-right">{d.evitada}</td><td className="text-right">{d.entrada}</td><td className="text-right">{d.saida}</td></tr>)}</tbody>
-                    </table>
-                 </Widget>
-
-                 <Widget title="Ocupação por Hospital" className="dh-span-12">
-                     <table className="dh-table">
-                        <thead><tr><th>HOSPITAL</th><th className="text-right">UI</th><th className="text-right">EL. UI</th><th className="text-right">USI</th><th className="text-right">CTI</th><th className="text-right">EL. CTI</th><th className="text-right">Total</th><th className="text-right">%</th></tr></thead>
-                        <tbody>{hospitalData.map(d => <tr key={d.hospital}><td>{d.hospital}</td><td className="text-right">{d.ui}</td><td className="text-right">{d.el}</td><td className="text-right">{d.usi}</td><td className="text-right">{d.cti}</td><td className="text-right">{d.elCti}</td><td className="text-right">{d.total}</td><td className="text-right">{d.pct}</td></tr>)}</tbody>
-                    </table>
-                 </Widget>
+                <div className="dh-left-column">
+                    <Widget title="Carteira">
+                        <table className="dh-table">
+                            <thead><tr><th>CARTEIRA</th><th>TOTAL INTERNADO</th><th>RESULTADO</th><th>CTI</th><th>Média Mês</th><th>Média Mês CTI</th></tr></thead>
+                            <tbody><tr><td>{carteiraData.carteira}</td><td>{carteiraData.totalInternado}</td><td>{carteiraData.resultado}</td><td>{carteiraData.cti}</td><td>{carteiraData.mediaMes}</td><td>{carteiraData.mediaMesCti}</td></tr></tbody>
+                        </table>
+                    </Widget>
+                    <Widget title="Internação por Rede">
+                        <table className="dh-table">
+                            <thead><tr><th>INTERNAÇÃO POR REDE</th><th className="text-right">QTD. INTERNADO</th><th className="text-right">%OCUPAÇÃO</th></tr></thead>
+                            <tbody>{internacaoRedeData.map(d => <tr key={d.rede}><td>{d.rede}</td><td className="text-right">{d.qtd}</td><td className="text-right">{d.ocupacao}</td></tr>)}</tbody>
+                        </table>
+                    </Widget>
+                    <Widget title="Natureza da Guia">
+                        <table className="dh-table">
+                            <thead><tr><th>NATUREZA DA GUIA</th><th className="text-right">TOTAL</th><th className="text-right">PAC DIA</th></tr></thead>
+                            <tbody>
+                                {naturezaGuiaData.map((d, i) => <tr key={d.natureza}><td>{d.natureza}</td><td className="text-right">{d.total}</td><td className="text-right">{d.pacDia}</td></tr>)}
+                                <tr style={{fontWeight: 'bold', backgroundColor: '#f9fafb'}}><td >SOMA DIA</td><td className="text-right" colSpan={2}>2,52</td></tr>
+                            </tbody>
+                        </table>
+                    </Widget>
+                    <Widget title="Regime">
+                        <table className="dh-table">
+                            <thead><tr><th>REGIME</th><th className="text-right">QTD. INTERNADO</th></tr></thead>
+                            <tbody>{regimeData.map(d => <tr key={d.regime}><td>{d.regime}</td><td className="text-right">{d.qtd}</td></tr>)}</tbody>
+                        </table>
+                    </Widget>
+                    <Widget title="Leito">
+                        <table className="dh-table">
+                            <thead><tr><th>LEITO</th><th className="text-right">QTD. INTERNADO</th></tr></thead>
+                            <tbody>{leitoData.map(d => <tr key={d.leito}><td>{d.leito}</td><td className="text-right">{d.qtd}</td></tr>)}</tbody>
+                        </table>
+                    </Widget>
+                    <Widget title="Meta x Resultado">
+                        <table className="dh-table">
+                            <thead>
+                                <tr>
+                                    <th>Indicador</th>
+                                    <th className="text-right">Meta</th>
+                                    <th className="text-right">Resultado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Meta</td>
+                                    <td className="text-right">{metaData.meta.toFixed(2)}</td>
+                                    <td className="text-right highlight-red">{metaData.pctMeta.toFixed(2)}%</td>
+                                </tr>
+                                <tr>
+                                    <td>Meta CTI</td>
+                                    <td className="text-right">{metaData.metaCti.toFixed(2)}</td>
+                                    <td className="text-right highlight-green">{metaData.pctMetaCti.toFixed(2)}%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <BarChart {...metaData} />
+                    </Widget>
+                    <Widget title="Região">
+                        <table className="dh-table">
+                            <thead><tr><th>REGIÃO</th><th className="text-right">CARTEIRA</th><th className="text-right">QTD. INTERNADO</th><th className="text-right">CTI</th><th className="text-right">PAC DIA</th><th className="text-right">CTI</th></tr></thead>
+                            <tbody>{regiaoData.map(d => <tr key={d.regiao}><td>{d.regiao}</td><td className="text-right">{d.carteira}</td><td className="text-right">{d.qtd}</td><td className="text-right">{d.cti}</td><td className="text-right">{d.pacDia}</td><td className="text-right">{d.ctiPacDia}</td></tr>)}</tbody>
+                        </table>
+                    </Widget>
+                    <Widget title="Produto Premium">
+                        <table className="dh-table">
+                            <thead><tr><th>CARTEIRA</th><th className="text-right">QTD. INTERNADO</th><th className="text-right">CTI</th><th className="text-right">PAC DIA</th><th className="text-right">CTI</th></tr></thead>
+                            <tbody>
+                                {produtoPremiumData.map(d => <tr key={d.carteira}><td>{d.carteira}</td><td className="text-right">{d.qtd}</td><td className="text-right">{d.cti}</td><td className="text-right">{d.pacDia}</td><td className="text-right">{d.ctiPacDia}</td></tr>)}
+                            </tbody>
+                        </table>
+                    </Widget>
+                </div>
+                <div className="dh-right-column">
+                    <Widget title="Acompanhamento Diário de Solicitação">
+                        <table className="dh-table">
+                            <thead><tr><th>DATA</th><th className="text-right">QTD. SOLICITAÇÃO</th><th className="text-right">LIBERADA</th><th className="text-right">NEGADA</th><th className="text-right">ELETIVO</th><th className="text-right">EVITADA</th><th className="text-right">ENTRADA</th><th className="text-right">SAIDA</th></tr></thead>
+                            <tbody>{solicitacaoData.map(d => <tr key={d.data}><td>{d.data}</td><td className="text-right">{d.qtd}</td><td className="text-right">{d.liberada}</td><td className="text-right">{d.negada}</td><td className="text-right">{d.eletivo}</td><td className="text-right">{d.evitada}</td><td className="text-right">{d.entrada}</td><td className="text-right">{d.saida}</td></tr>)}</tbody>
+                        </table>
+                    </Widget>
+                    <Widget title="Ocupação por Hospital">
+                        <table className="dh-table">
+                           <thead><tr><th>HOSPITAL</th><th className="text-right">UI</th><th className="text-right">EL. UI</th><th className="text-right">USI</th><th className="text-right">CTI</th><th className="text-right">EL. CTI</th><th className="text-right">Total</th><th className="text-right">%</th></tr></thead>
+                           <tbody>{hospitalData.map(d => <tr key={d.hospital}><td>{d.hospital}</td><td className="text-right">{d.ui}</td><td className="text-right">{d.el}</td><td className="text-right">{d.usi}</td><td className="text-right">{d.cti}</td><td className="text-right">{d.elCti}</td><td className="text-right">{d.total}</td><td className="text-right">{d.pct}</td></tr>)}</tbody>
+                       </table>
+                    </Widget>
+                </div>
             </div>
         </div>
     );
