@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import AppHeader from '../components/AppHeader.tsx';
 
-// --- DADOS DA HOSPITALIZAÇÃO SUB-COMPONENT ---
+// --- DADOS DA HOSPITALIZAÇÃO SUB-COMPONENT (NEW VERSION) ---
 const DadosHospitalizacaoDashboard = () => {
-    // Filter State
+    // Filter State & Handlers
     const [hospitalFilter, setHospitalFilter] = useState<string[]>([]);
     const [tempHospitalFilter, setTempHospitalFilter] = useState<string[]>([]);
     const [isHospitalDropdownOpen, setIsHospitalDropdownOpen] = useState(false);
@@ -19,7 +19,7 @@ const DadosHospitalizacaoDashboard = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const uniqueHospitals = ['PRONTONIL', 'JORGE JABER', 'HSF', 'SANTA LUCIA', 'ENIO SERRA', 'ISRAELITA', 'EMCOR', 'VITORIA'];
+    const uniqueHospitals = ['PRONTONIL', 'JORGE JABER', 'HSF', 'SANTA LUCIA', 'ENIO SERRA', 'ISRAELITA', 'EMCOR', 'VITORIA', 'PRO CARDIACO', 'PRONTO BABY', 'HIAS'];
 
     const handleApplyFilters = () => setHospitalFilter(tempHospitalFilter);
     const handleClearFilters = () => {
@@ -30,32 +30,30 @@ const DadosHospitalizacaoDashboard = () => {
         setTempHospitalFilter(prev => prev.includes(hospital) ? prev.filter(s => s !== hospital) : [...prev, hospital]);
     };
 
-    // Mock Data
-    const carteiraData = { totalInternado: 248, resultado: 2.52, cti: 0.64, mediaMes: 2.36, mediaMesCti: 0.70 };
+    // Static Data
+    const carteiraData = { carteira: "98.219", totalInternado: 248, resultado: "2,52", cti: "0,64", mediaMes: "2,36", mediaMesCti: "0,70" };
     const internacaoRedeData = [{ rede: 'REDE PREMIUM', qtd: 29, ocupacao: '11,69%' }, { rede: 'REDE BÁSICA', qtd: 219, ocupacao: '88,31%' }];
-    const naturezaGuiaData = [{ natureza: 'URGENCIA', total: 177, pacDia: 1.80 }, { natureza: 'ELETIVA', total: 32, pacDia: 0.33 }, { natureza: 'PSIQUIATRIA', total: 39, pacDia: 0.40 }];
+    const naturezaGuiaData = [{ natureza: 'URGENCIA', total: 177, pacDia: "1,80" }, { natureza: 'ELETIVA', total: 32, pacDia: "0,33" }, { natureza: 'PSIQUIATRIA', total: 39, pacDia: "0,40" }];
     const regimeData = [{ regime: 'URGENCIA', qtd: 216 }, { regime: 'ELETIVA', qtd: 32 }, { regime: 'TOTAL', qtd: 248 }];
     const leitoData = [{ leito: 'UI', qtd: 185 }, { leito: 'USI', qtd: 0 }, { leito: 'CTI', qtd: 63 }, { leito: 'TOTAL', qtd: 248 }];
-    const regiaoData = [{ regiao: 'RIO DE JANEIRO', carteira: 67494, qtd: 178, cti: 46, pacDia: 2.64, ctiPacDia: 0.68 }, { regiao: 'BAIXADA', carteira: 10346, qtd: 32, cti: 4, pacDia: 3.09, ctiPacDia: 0.39 }, { regiao: 'LESTE', carteira: 11752, qtd: 31, cti: 9, pacDia: 2.64, ctiPacDia: 0.77 }];
-    const produtoPremiumData = [{ carteira: 18511, qtd: 64, cti: 15, pacDia: 3.46, ctiPacDia: 0.81 }, { carteira: 'REDE PREMIUM', qtd: 26, cti: 9, pacDia: '40,63%' }, { carteira: 'REDE BÁSICA', qtd: 38, cti: 8, pacDia: '59,38%' }];
-    const metaData = { meta: 2.35, metaCti: 0.80, pctMeta: '7,45%', pctMetaCti: '-19,82%' };
+    const regiaoData = [{ regiao: 'RIO DE JANEIRO', carteira: "67.494", qtd: 178, cti: 46, pacDia: "2,64", ctiPacDia: "0,68" }, { regiao: 'BAIXADA', carteira: "10.346", qtd: 32, cti: 4, pacDia: "3,09", ctiPacDia: "0,39" }, { regiao: 'LESTE', carteira: "11.752", qtd: 31, cti: 9, pacDia: "2,64", ctiPacDia: "0,77" }];
+    const produtoPremiumData = [{ carteira: '18.511', qtd: 64, cti: 15, pacDia: "3,46", ctiPacDia: "0,81" }, { carteira: 'REDE PREMIUM', qtd: 26, cti: 9, pacDia: '40,63%', ctiPacDia: '' }, { carteira: 'REDE BÁSICA', qtd: 38, cti: 8, pacDia: '59,38%', ctiPacDia: '' }];
+    const metaData = { meta: "2,35", metaCti: "0,80", pctMeta: '7,45%', pctMetaCti: '-19,82%' };
     const solicitacaoData = [
         { data: '01/10/2025', qtd: 21, liberada: 21, negada: 0, eletivo: 21, evitada: 0, entrada: 42, saida: 45 },
         { data: '02/10/2025', qtd: 34, liberada: 29, negada: 3, eletivo: 18, evitada: 2, entrada: 47, saida: 41 },
+        { data: '03/10/2025', qtd: 38, liberada: 35, negada: 1, eletivo: 15, evitada: 2, entrada: 50, saida: 45 },
     ];
     const hospitalData = [
         { hospital: 'PRONTONIL', ui: 4, el: 0, usi: 0, cti: 1, elCti: 0, total: 5, pct: '2,02%' },
         { hospital: 'JORGE JABER', ui: 0, el: 0, usi: 0, cti: 0, elCti: 0, total: 0, pct: '0,00%' },
+        { hospital: 'HSF', ui: 9, el: 0, usi: 0, cti: 2, elCti: 0, total: 11, pct: '4,44%' },
+        { hospital: 'SANTA LUCIA', ui: 0, el: 0, usi: 0, cti: 0, elCti: 0, total: 0, pct: '0,00%' },
     ];
-
 
     return (
         <div style={{ marginTop: '24px' }}>
-            <div className="dh-header-bar">
-                <h2>DADOS HOSPITALIZAÇÃO</h2>
-                <span>07/11/2025</span>
-            </div>
-            <div className="filter-bar" style={{ borderRadius: 0, marginBottom: 0 }}>
+            <div className="filter-bar">
                 <div className="filter-controls">
                     <div className="form-group" ref={hospitalDropdownRef}>
                         <label>Hospital:</label>
@@ -80,73 +78,129 @@ const DadosHospitalizacaoDashboard = () => {
                     <button onClick={handleApplyFilters} className="save-button">Aplicar</button>
                 </div>
             </div>
-            <div className="hospitalizacao-dashboard-grid">
-                {/* Tables and Chart */}
-                <div className="dh-card dh-card-single-col">
-                    <table className="dh-table">
-                        <thead><tr><th className="dh-header-purple" colSpan={2}>CARTEIRA</th></tr></thead>
-                        <tbody><tr><td>{carteiraData.totalInternado}</td><td>TOTAL INTERNADO</td></tr><tr><td>{carteiraData.resultado}</td><td>RESULTADO</td></tr><tr><td>{carteiraData.cti}</td><td>CTI</td></tr><tr><td>{carteiraData.mediaMes}</td><td>Média Mês</td></tr><tr><td>{carteiraData.mediaMesCti}</td><td>Média Mês CTI</td></tr></tbody>
-                    </table>
+
+            <div className="dh-dashboard-header">
+                <h2>DADOS HOSPITALIZAÇÃO</h2>
+                <span>07/11/2025</span>
+            </div>
+
+            <div className="dados-hosp-dashboard">
+                <div className="dh-widget">
+                    <h3 className="dh-widget-title">CARTEIRA</h3>
+                    <table className="dh-widget-table"><tbody>
+                        <tr><td className="label-cell">CARTEIRA</td><td className="value-cell">{carteiraData.carteira}</td></tr>
+                        <tr><td className="label-cell">TOTAL INTERNADO</td><td className="value-cell">{carteiraData.totalInternado}</td></tr>
+                        <tr><td className="label-cell">RESULTADO</td><td className="value-cell">{carteiraData.resultado}</td></tr>
+                        <tr><td className="label-cell">CTI</td><td className="value-cell">{carteiraData.cti}</td></tr>
+                        <tr><td className="label-cell">Média Mês</td><td className="value-cell">{carteiraData.mediaMes}</td></tr>
+                        <tr><td className="label-cell">Média Mês CTI</td><td className="value-cell">{carteiraData.mediaMesCti}</td></tr>
+                    </tbody></table>
                 </div>
-                <div className="dh-card dh-card-single-col">
-                    <table className="dh-table">
-                        <thead><tr><th className="dh-header-purple" colSpan={3}>NATUREZA DA GUIA</th></tr><tr><th className="dh-header-purple"></th><th className="dh-header-purple">TOTAL</th><th className="dh-header-purple">PAC DIA</th></tr></thead>
-                        <tbody>{naturezaGuiaData.map(d => <tr key={d.natureza}><td>{d.natureza}</td><td>{d.total}</td><td>{d.pacDia}</td></tr>)}<tr><td><strong>SOMA DIA</strong></td><td colSpan={2}><strong>2,52</strong></td></tr></tbody>
-                    </table>
+                 <div className="dh-widget">
+                    <h3 className="dh-widget-title">INTERNAÇÃO POR REDE</h3>
+                    <table className="dh-widget-table"><thead><tr><th>REDE</th><th>QTD. INTERNADO</th><th>% OCUPAÇÃO</th></tr></thead><tbody>
+                        {internacaoRedeData.map(d => <tr key={d.rede}><td>{d.rede}</td><td className="value-cell">{d.qtd}</td><td className="value-cell">{d.ocupacao}</td></tr>)}
+                    </tbody></table>
                 </div>
-                <div className="dh-card dh-card-chart">
-                    <h3>Meta x Resultado</h3>
-                    <div className="dh-bar-chart">
-                        <div className="dh-bar-group"><div className="dh-bar-value">{metaData.meta}</div><div className="dh-bar" style={{ height: '100%' }}></div><div className="dh-bar-label">Meta</div></div>
-                        <div className="dh-bar-group"><div className="dh-bar-value">{metaData.metaCti}</div><div className="dh-bar" style={{ height: '34%' }}></div><div className="dh-bar-label">Meta CTI</div></div>
-                        <div className="dh-line" style={{ bottom: `${(metaData.meta / 3) * 100}%` }}><span className="dh-line-label">{metaData.pctMeta}</span></div>
+                 <div className="dh-widget">
+                    <h3 className="dh-widget-title">NATUREZA DA GUIA</h3>
+                    <table className="dh-widget-table"><thead><tr><th>NATUREZA</th><th>TOTAL</th><th>PAC DIA</th></tr></thead><tbody>
+                        {naturezaGuiaData.map(d => <tr key={d.natureza}><td>{d.natureza}</td><td className="value-cell">{d.total}</td><td className="value-cell">{d.pacDia}</td></tr>)}
+                        <tr><td className="label-cell"><strong>SOMA DIA</strong></td><td colSpan={2} className="value-cell"><strong>2,52</strong></td></tr>
+                    </tbody></table>
+                </div>
+                <div className="dh-widget">
+                    <h3 className="dh-widget-title">REGIME</h3>
+                    <table className="dh-widget-table"><thead><tr><th>REGIME</th><th>QTD. INTERNADO</th></tr></thead><tbody>
+                        {regimeData.map(d => <tr key={d.regime}><td>{d.regime}</td><td className="value-cell">{d.qtd}</td></tr>)}
+                    </tbody></table>
+                </div>
+                 <div className="dh-widget">
+                    <h3 className="dh-widget-title">LEITO</h3>
+                    <table className="dh-widget-table"><thead><tr><th>LEITO</th><th>QTD. INTERNADO</th></tr></thead><tbody>
+                        {leitoData.map(d => <tr key={d.leito}><td>{d.leito}</td><td className="value-cell">{d.qtd}</td></tr>)}
+                    </tbody></table>
+                </div>
+                <div className="dh-widget">
+                    <h3 className="dh-widget-title">Meta x Resultado</h3>
+                    <div className="mxr-chart-container">
+                        {/* Meta Group */}
+                        <div className="mxr-chart-group">
+                            <div className="mxr-bars">
+                                <div className="mxr-bar-wrapper">
+                                    <span className="mxr-bar-label">{metaData.meta}</span>
+                                    <div className="mxr-bar goal" style={{ height: '120px' }}></div>
+                                </div>
+                                <div className="mxr-bar-wrapper">
+                                    <span className="mxr-bar-label">{metaData.pctMeta}</span>
+                                    <div className="mxr-bar result positive" style={{ height: '30px' }}></div>
+                                </div>
+                            </div>
+                            <div className="mxr-category-label">Meta</div>
+                        </div>
+
+                        {/* Meta CTI Group */}
+                        <div className="mxr-chart-group">
+                            <div className="mxr-bars">
+                                <div className="mxr-bar-wrapper">
+                                    <span className="mxr-bar-label">{metaData.metaCti}</span>
+                                    <div className="mxr-bar goal" style={{ height: '41px' }}></div>
+                                </div>
+                            </div>
+                            <div className="mxr-bars negative-group">
+                                <div className="mxr-bar-wrapper">
+                                    <div className="mxr-bar result negative" style={{ height: '45px' }}></div>
+                                    <span className="mxr-bar-label">{metaData.pctMetaCti}</span>
+                                </div>
+                            </div>
+                            <div className="mxr-category-label">Meta CTI</div>
+                        </div>
                     </div>
-                </div>
-                <div className="dh-card dh-card-meta">
-                     <table className="dh-table">
-                        <thead><tr><th className="dh-header-purple" colSpan={2}>% Meta</th></tr></thead>
-                        <tbody><tr><td>{metaData.pctMeta}</td><td className="highlight-green">OK</td></tr><tr><td>{metaData.pctMetaCti}</td><td className="highlight-red">NOK</td></tr></tbody>
+                    <table className="dh-widget-table">
+                         <thead>
+                            <tr>
+                                <th>Indicador</th>
+                                <th style={{ textAlign: 'right' }}>Meta</th>
+                                <th style={{ textAlign: 'right' }}>Resultado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Meta</td>
+                                <td className="value-cell">{metaData.meta}</td>
+                                <td className="value-cell highlight-red">{metaData.pctMeta}</td>
+                            </tr>
+                            <tr>
+                                <td>Meta CTI</td>
+                                <td className="value-cell">{metaData.metaCti}</td>
+                                <td className="value-cell highlight-green">{metaData.pctMetaCti}</td>
+                            </tr>
+                        </tbody>
                     </table>
                 </div>
-                <div className="dh-card dh-card-single-col">
-                    <table className="dh-table">
-                        <thead><tr><th className="dh-header-purple" colSpan={2}>INTERNAÇÃO POR REDE</th></tr><tr><th className="dh-header-purple">REDE</th><th className="dh-header-purple">%OCUPAÇÃO</th></tr></thead>
-                        <tbody>{internacaoRedeData.map(d => <tr key={d.rede}><td>{d.rede}</td><td>{d.ocupacao}</td></tr>)}</tbody>
-                    </table>
+                <div className="dh-widget full-width">
+                    <h3 className="dh-widget-title">REGIÃO</h3>
+                    <table className="dh-widget-table"><thead><tr><th>REGIÃO</th><th>CARTEIRA</th><th>QTD. INTERNADO</th><th>CTI</th><th>PAC DIA</th><th>CTI PAC DIA</th></tr></thead><tbody>
+                        {regiaoData.map(d => <tr key={d.regiao}><td>{d.regiao}</td><td>{d.carteira}</td><td>{d.qtd}</td><td>{d.cti}</td><td>{d.pacDia}</td><td>{d.ctiPacDia}</td></tr>)}
+                    </tbody></table>
                 </div>
-                <div className="dh-card dh-card-single-col">
-                    <table className="dh-table">
-                        <thead><tr><th className="dh-header-purple" colSpan={2}>REGIME</th></tr><tr><th className="dh-header-purple"></th><th className="dh-header-purple">QTD. INTERNADO</th></tr></thead>
-                        <tbody>{regimeData.map(d => <tr key={d.regime}><td>{d.regime}</td><td>{d.qtd}</td></tr>)}</tbody>
-                    </table>
+                <div className="dh-widget full-width">
+                    <h3 className="dh-widget-title">PRODUTO PREMIUM</h3>
+                    <table className="dh-widget-table"><thead><tr><th>CARTEIRA</th><th>QTD. INTERNADO</th><th>CTI</th><th>PAC DIA</th><th>CTI PAC DIA</th></tr></thead><tbody>
+                        {produtoPremiumData.map(d => <tr key={d.carteira}><td>{d.carteira}</td><td>{d.qtd}</td><td>{d.cti}</td><td>{d.pacDia}</td><td>{d.ctiPacDia}</td></tr>)}
+                    </tbody></table>
                 </div>
-                <div className="dh-card dh-card-single-col">
-                    <table className="dh-table">
-                        <thead><tr><th className="dh-header-purple" colSpan={2}>LEITO</th></tr><tr><th className="dh-header-purple"></th><th className="dh-header-purple">QTD. INTERNADO</th></tr></thead>
-                        <tbody>{leitoData.map(d => <tr key={d.leito}><td>{d.leito}</td><td>{d.qtd}</td></tr>)}</tbody>
-                    </table>
-                </div>
-                <div className="dh-card dh-full-width-table">
-                    <table className="dh-table">
-                        <thead><tr><th className="dh-header-orange" colSpan={6}>REGIÃO</th></tr><tr><th className="dh-header-orange"></th><th className="dh-header-orange">CARTEIRA</th><th className="dh-header-orange">QTD. INTERNADO</th><th className="dh-header-orange">CTI</th><th className="dh-header-orange">PAC DIA</th><th className="dh-header-orange">CTI</th></tr></thead>
-                        <tbody>{regiaoData.map(d => <tr key={d.regiao}><td>{d.regiao}</td><td>{d.carteira}</td><td>{d.qtd}</td><td>{d.cti}</td><td>{d.pacDia}</td><td>{d.ctiPacDia}</td></tr>)}</tbody>
-                    </table>
-                </div>
-                <div className="dh-card dh-full-width-table">
-                    <table className="dh-table">
-                        <thead><tr><th className="dh-header-blue" colSpan={6}>PRODUTO PREMIUM</th></tr><tr><th className="dh-header-blue">CARTEIRA</th><th className="dh-header-blue">QTD. INTERNADO</th><th className="dh-header-blue">CTI</th><th className="dh-header-blue">PAC DIA</th><th className="dh-header-blue">CTI</th></tr></thead>
-                        <tbody>{produtoPremiumData.map(d => <tr key={d.carteira}><td>{d.carteira}</td><td>{d.qtd}</td><td>{d.cti}</td><td>{d.pacDia}</td><td>{d.ctiPacDia}</td></tr>)}</tbody>
-                    </table>
-                </div>
-                <div className="dh-card dh-full-width-table">
-                     <table className="dh-table">
-                        <thead><tr><th className="dh-header-dark-grey">DATA</th><th className="dh-header-dark-grey">QTD. SOLICITAÇÃO</th><th className="dh-header-dark-grey">LIBERADA</th><th className="dh-header-dark-grey">NEGADA</th><th className="dh-header-dark-grey">ELETIVO</th><th className="dh-header-dark-grey">EVITADA</th><th className="dh-header-dark-grey">ENTRADA</th><th className="dh-header-dark-grey">SAIDA</th></tr></thead>
+                <div className="dh-widget full-width">
+                    <h3 className="dh-widget-title">ACOMPANHAMENTO DIÁRIO</h3>
+                     <table className="dh-widget-table">
+                        <thead><tr><th>DATA</th><th>QTD. SOLICITAÇÃO</th><th>LIBERADA</th><th>NEGADA</th><th>ELETIVO</th><th>EVITADA</th><th>ENTRADA</th><th>SAIDA</th></tr></thead>
                         <tbody>{solicitacaoData.map(d => <tr key={d.data}><td>{d.data}</td><td>{d.qtd}</td><td>{d.liberada}</td><td>{d.negada}</td><td>{d.eletivo}</td><td>{d.evitada}</td><td>{d.entrada}</td><td>{d.saida}</td></tr>)}</tbody>
                     </table>
                 </div>
-                 <div className="dh-card dh-full-width-table">
-                     <table className="dh-table">
-                        <thead><tr><th className="dh-header-grey">HOSPITAL</th><th className="dh-header-grey">UI</th><th className="dh-header-grey">EL. UI</th><th className="dh-header-grey">USI</th><th className="dh-header-grey">CTI</th><th className="dh-header-grey">EL. CTI</th><th className="dh-header-grey">Total</th><th className="dh-header-grey">%</th></tr></thead>
+                 <div className="dh-widget full-width">
+                    <h3 className="dh-widget-title">OCUPAÇÃO POR HOSPITAL</h3>
+                     <table className="dh-widget-table">
+                        <thead><tr><th>HOSPITAL</th><th>UI</th><th>EL. UI</th><th>USI</th><th>CTI</th><th>EL. CTI</th><th>Total</th><th>%</th></tr></thead>
                         <tbody>{hospitalData.map(d => <tr key={d.hospital}><td>{d.hospital}</td><td>{d.ui}</td><td>{d.el}</td><td>{d.usi}</td><td>{d.cti}</td><td>{d.elCti}</td><td>{d.total}</td><td>{d.pct}</td></tr>)}</tbody>
                     </table>
                 </div>
