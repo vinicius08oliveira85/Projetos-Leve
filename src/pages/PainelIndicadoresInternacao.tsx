@@ -175,21 +175,21 @@ const DadosHospitalizacaoDashboard = () => {
                 </div>
             </div>
             
-             <div className="dados-hospitalizacao-grid" style={{marginTop: '24px'}}>
-                <div className="dh-left-column">
-                    <Widget title="Carteira">
+            <div className="dados-hospitalizacao-grid" style={{marginTop: '24px'}}>
+                 <div className="dh-left-widgets">
+                    <Widget title="Regime">
                         <table className="dh-table">
-                            <thead><tr><th>CARTEIRA</th><th>TOTAL INTERNADO</th><th>RESULTADO</th><th>CTI</th><th>Média Mês</th><th>Média Mês CTI</th></tr></thead>
-                            <tbody><tr><td>{carteiraData.carteira}</td><td>{carteiraData.totalInternado}</td><td>{carteiraData.resultado}</td><td>{carteiraData.cti}</td><td>{carteiraData.mediaMes}</td><td>{carteiraData.mediaMesCti}</td></tr></tbody>
+                            <thead><tr><th>REGIME</th><th>QTD. INTERNADO</th></tr></thead>
+                            <tbody>{regimeData.map(d => <tr key={d.regime}><td>{d.regime}</td><td>{d.qtd}</td></tr>)}</tbody>
                         </table>
                     </Widget>
-                    <Widget title="Internação por Rede">
+                     <Widget title="Leito">
                         <table className="dh-table">
-                            <thead><tr><th>INTERNAÇÃO POR REDE</th><th>QTD. INTERNADO</th><th>%OCUPAÇÃO</th></tr></thead>
-                            <tbody>{internacaoRedeData.map(d => <tr key={d.rede}><td>{d.rede}</td><td>{d.qtd}</td><td>{d.ocupacao}</td></tr>)}</tbody>
+                            <thead><tr><th>LEITO</th><th>QTD. INTERNADO</th></tr></thead>
+                            <tbody>{leitoData.map(d => <tr key={d.leito}><td>{d.leito}</td><td>{d.qtd}</td></tr>)}</tbody>
                         </table>
                     </Widget>
-                    <Widget title="Natureza da Guia">
+                    <Widget title="Natureza da Guia" className="span-2">
                         <table className="dh-table">
                             <thead><tr><th>NATUREZA DA GUIA</th><th>TOTAL</th><th>PAC DIA</th></tr></thead>
                             <tbody>
@@ -198,19 +198,7 @@ const DadosHospitalizacaoDashboard = () => {
                             </tbody>
                         </table>
                     </Widget>
-                    <Widget title="Regime">
-                        <table className="dh-table">
-                            <thead><tr><th>REGIME</th><th>QTD. INTERNADO</th></tr></thead>
-                            <tbody>{regimeData.map(d => <tr key={d.regime}><td>{d.regime}</td><td>{d.qtd}</td></tr>)}</tbody>
-                        </table>
-                    </Widget>
-                    <Widget title="Leito">
-                        <table className="dh-table">
-                            <thead><tr><th>LEITO</th><th>QTD. INTERNADO</th></tr></thead>
-                            <tbody>{leitoData.map(d => <tr key={d.leito}><td>{d.leito}</td><td>{d.qtd}</td></tr>)}</tbody>
-                        </table>
-                    </Widget>
-                    <Widget title="Meta x Resultado">
+                    <Widget title="Meta x Resultado" className="span-2">
                         <table className="dh-table">
                             <thead>
                                 <tr>
@@ -234,13 +222,13 @@ const DadosHospitalizacaoDashboard = () => {
                         </table>
                         <BarChart {...metaData} />
                     </Widget>
-                    <Widget title="Região">
+                    <Widget title="Região" className="span-2">
                         <table className="dh-table">
                             <thead><tr><th>REGIÃO</th><th>CARTEIRA</th><th>QTD. INTERNADO</th><th>CTI</th><th>PAC DIA</th><th>CTI</th></tr></thead>
                             <tbody>{regiaoData.map(d => <tr key={d.regiao}><td>{d.regiao}</td><td>{d.carteira}</td><td>{d.qtd}</td><td>{d.cti}</td><td>{d.pacDia}</td><td>{d.ctiPacDia}</td></tr>)}</tbody>
                         </table>
                     </Widget>
-                    <Widget title="Produto Premium">
+                    <Widget title="Produto Premium" className="span-2">
                         <table className="dh-table">
                             <thead><tr><th>CARTEIRA</th><th>QTD. INTERNADO</th><th>CTI</th><th>PAC DIA</th><th>CTI</th></tr></thead>
                             <tbody>
@@ -249,7 +237,7 @@ const DadosHospitalizacaoDashboard = () => {
                         </table>
                     </Widget>
                 </div>
-                <div className="dh-right-column">
+                <div className="dh-right-widgets">
                     <Widget title="Acompanhamento Diário de Solicitação">
                         <table className="dh-table">
                             <thead><tr><th>DATA</th><th>QTD. SOLICITAÇÃO</th><th>LIBERADA</th><th>NEGADA</th><th>ELETIVO</th><th>EVITADA</th><th>ENTRADA</th><th>SAIDA</th></tr></thead>
