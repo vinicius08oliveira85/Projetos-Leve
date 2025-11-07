@@ -1063,11 +1063,17 @@ legend {
     text-align: center;
     border: 1px solid var(--border-color);
     transition: all 0.2s ease-in-out;
+    cursor: pointer;
 }
 .espera-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 20px rgba(0,0,0,0.08);
     border-color: var(--primary-color);
+}
+.espera-card.active {
+    border-color: var(--secondary-color);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
 }
 .espera-card h3 {
     font-size: 16px;
@@ -1857,6 +1863,11 @@ legend {
     font-size: 26px;
     font-weight: 700;
     line-height: 1.1;
+}
+
+.patient-table .days-cell {
+    text-align: center;
+    font-weight: 600;
 }
 
 

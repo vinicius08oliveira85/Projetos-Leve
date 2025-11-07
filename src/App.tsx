@@ -193,20 +193,19 @@ const App = () => {
                             onBack={handleBackToMenu} 
                             onSelectPatient={handleSelectPatient} 
                             user={user} 
-                            patients={patients} 
+                            patients={patients}
+                            onUpdatePatient={handleUpdatePatient}
                             onSavePatients={handleUpdateMultiplePatients} 
                             showToast={showToast}
                             title={pageInfo?.title ?? 'Mapa de Espera'}
                             subtitle={pageInfo?.description ?? ''}
-                            onViewDetails={handleSelectEspera}
                         />;
             case 'Pacientes Aguardando Cirurgia':
                  return <PacientesAguardandoCirurgia
                             onBack={() => handleSelectPage('Mapa de Espera')}
-                            onViewDetails={handleViewSurgeryWaitDetails}
+                            onUpdatePatient={handleUpdatePatient}
                             user={user}
                             patients={patients}
-                            onSavePatients={handleUpdateMultiplePatients}
                             showToast={showToast}
                         />;
             case 'Pacientes Aguardando Exame':
