@@ -19,7 +19,7 @@ const DadosHospitalizacaoDashboard = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const uniqueHospitals = ['PRONTONIL', 'JORGE JABER', 'HSF', 'SANTA LUCIA', 'ENIO SERRA', 'ISRAELITA', 'EMCOR', 'VITORIA', 'PRO CARDIACO', 'PRONTO BABY', 'HIAS'];
+    const uniqueHospitals = ['PRONTONIL', 'JORGE JABER', 'HSF', 'SANTA LUCIA', 'ENIO SERRA', 'ISRAELITA', 'EMCOR', 'VITORIA', 'VISTA ALEGRE', 'CHN', 'PROCOR', 'PRO CARDIACO', 'SMH', 'SÃO MATHEUS', 'SANTA BARBARA', 'SAO LUCAS COPACABANA', 'PRONTOBABY', 'CLIN GAVEA', 'NOSSA SENHORA DO CARMO', 'TEREZINHA DE JESUS', 'ALAMEDA', 'SÃO LUCAS ICARAI', 'DANIEL LIPP', 'CENTRO PED LAGOA', 'DI CAMP', 'SEMIU', 'SAMCORDIS', 'PROCEM', 'QUALITY CARE', 'CASA DE SAUDE GRAJAU', 'CLINICA PED BARRA', 'SANTA TERESA', 'CASA DE SAUDE SAO JOSE', 'BADIM', 'PASTEUR', 'RIO BARRA', 'MARIO LIONI', 'HCJ'];
 
     const handleApplyFilters = () => setHospitalFilter(tempHospitalFilter);
     const handleClearFilters = () => {
@@ -50,12 +50,58 @@ const DadosHospitalizacaoDashboard = () => {
         { data: '01/10/2025', qtd: 21, liberada: 21, negada: 0, eletivo: 21, evitada: 0, entrada: 42, saida: 45 },
         { data: '02/10/2025', qtd: 34, liberada: 29, negada: 3, eletivo: 18, evitada: 2, entrada: 47, saida: 41 },
         { data: '03/10/2025', qtd: 38, liberada: 35, negada: 1, eletivo: 15, evitada: 2, entrada: 50, saida: 45 },
+        { data: '04/10/2025', qtd: 29, liberada: 25, negada: 2, eletivo: 10, evitada: 2, entrada: 35, saida: 39 },
+        { data: '05/10/2025', qtd: 26, liberada: 22, negada: 2, eletivo: 10, evitada: 2, entrada: 32, saida: 31 },
+        { data: '06/10/2025', qtd: 24, liberada: 23, negada: 1, eletivo: 28, evitada: 0, entrada: 51, saida: 44 },
+        { data: '07/11/2025', qtd: 25, liberada: 24, negada: 0, eletivo: 20, evitada: 1, entrada: 44, saida: 45 },
+        { data: '08/10/2025', qtd: 36, liberada: 34, negada: 2, eletivo: 27, evitada: 0, entrada: 61, saida: 53 },
+        { data: '09/10/2025', qtd: 25, liberada: 23, negada: 2, eletivo: 15, evitada: 2, entrada: 36, saida: 38 },
+        { data: '10/10/2025', qtd: 26, liberada: 24, negada: 2, eletivo: 14, evitada: 0, entrada: 38, saida: 46 },
+        { data: '11/10/2025', qtd: 17, liberada: 15, negada: 2, eletivo: 13, evitada: 0, entrada: 28, saida: 40 },
+        { data: '12/10/2025', qtd: 13, liberada: 12, negada: 1, eletivo: 1, evitada: 0, entrada: 13, saida: 27 },
+        { data: '13/10/2025', qtd: 28, liberada: 26, negada: 0, eletivo: 24, evitada: 2, entrada: 50, saida: 24 },
+        { data: '14/10/2025', qtd: 20, liberada: 20, negada: 0, eletivo: 19, evitada: 0, entrada: 39, saida: 36 },
+        { data: '15/10/2025', qtd: 4, liberada: 4, negada: 0, eletivo: 17, evitada: 0, entrada: 21, saida: 4 },
     ];
     const hospitalData = [
         { hospital: 'PRONTONIL', ui: 4, el: 0, usi: 0, cti: 1, elCti: 0, total: 5, pct: '2,02%' },
         { hospital: 'JORGE JABER', ui: 0, el: 0, usi: 0, cti: 0, elCti: 0, total: 0, pct: '0,00%' },
         { hospital: 'HSF', ui: 9, el: 0, usi: 0, cti: 2, elCti: 0, total: 11, pct: '4,44%' },
         { hospital: 'SANTA LUCIA', ui: 0, el: 0, usi: 0, cti: 0, elCti: 0, total: 0, pct: '0,00%' },
+        { hospital: 'ENIO SERRA', ui: 0, el: 2, usi: 0, cti: 0, elCti: 0, total: 2, pct: '0,81%' },
+        { hospital: 'ISRAELITA', ui: 33, el: 23, usi: 0, cti: 16, elCti: 0, total: 72, pct: '29,03%' },
+        { hospital: 'EMCOR', ui: 1, el: 0, usi: 0, cti: 0, elCti: 0, total: 1, pct: '0,40%' },
+        { hospital: 'VITORIA', ui: 11, el: 0, usi: 0, cti: 5, elCti: 1, total: 17, pct: '6,85%' },
+        { hospital: 'VISTA ALEGRE', ui: 2, el: 0, usi: 0, cti: 0, elCti: 0, total: 2, pct: '0,81%' },
+        { hospital: 'CHN', ui: 0, el: 0, usi: 0, cti: 1, elCti: 0, total: 1, pct: '0,40%' },
+        { hospital: 'PROCOR', ui: 20, el: 5, usi: 0, cti: 15, elCti: 0, total: 40, pct: '16,13%' },
+        { hospital: 'PRO CARDIACO', ui: 3, el: 0, usi: 0, cti: 1, elCti: 0, total: 4, pct: '1,61%' },
+        { hospital: 'SMH', ui: 0, el: 0, usi: 0, cti: 0, elCti: 0, total: 0, pct: '0,00%' },
+        { hospital: 'SÃO MATHEUS', ui: 0, el: 0, usi: 0, cti: 1, elCti: 0, total: 1, pct: '0,40%' },
+        { hospital: 'SANTA BARBARA', ui: 1, el: 0, usi: 0, cti: 0, elCti: 0, total: 1, pct: '0,40%' },
+        { hospital: 'SAO LUCAS COPACABANA', ui: 0, el: 0, usi: 0, cti: 0, elCti: 0, total: 0, pct: '0,00%' },
+        { hospital: 'PRONTOBABY', ui: 3, el: 0, usi: 0, cti: 1, elCti: 0, total: 4, pct: '1,61%' },
+        { hospital: 'CLIN GAVEA', ui: 32, el: 0, usi: 0, cti: 0, elCti: 0, total: 32, pct: '12,90%' },
+        { hospital: 'NOSSA SENHORA DO CARMO', ui: 1, el: 0, usi: 0, cti: 0, elCti: 0, total: 1, pct: '0,40%' },
+        { hospital: 'TEREZINHA DE JESUS', ui: 0, el: 0, usi: 0, cti: 0, elCti: 0, total: 0, pct: '0,00%' },
+        { hospital: 'ALAMEDA', ui: 9, el: 0, usi: 0, cti: 1, elCti: 0, total: 10, pct: '4,03%' },
+        { hospital: 'SÃO LUCAS ICARAI', ui: 1, el: 0, usi: 0, cti: 0, elCti: 0, total: 1, pct: '0,40%' },
+        { hospital: 'DANIEL LIPP', ui: 3, el: 0, usi: 0, cti: 0, elCti: 0, total: 3, pct: '1,21%' },
+        { hospital: 'CENTRO PED LAGOA', ui: 3, el: 0, usi: 0, cti: 3, elCti: 0, total: 6, pct: '2,42%' },
+        { hospital: 'DI CAMP', ui: 7, el: 0, usi: 0, cti: 3, elCti: 0, total: 10, pct: '4,03%' },
+        { hospital: 'SEMIU', ui: 0, el: 0, usi: 0, cti: 0, elCti: 0, total: 0, pct: '0,00%' },
+        { hospital: 'SAMCORDIS', ui: 5, el: 0, usi: 0, cti: 8, elCti: 0, total: 13, pct: '5,24%' },
+        { hospital: 'PROCEM', ui: 0, el: 0, usi: 0, cti: 0, elCti: 0, total: 0, pct: '0,00%' },
+        { hospital: 'QUALITY CARE', ui: 3, el: 0, usi: 0, cti: 0, elCti: 0, total: 3, pct: '1,21%' },
+        { hospital: 'CASA DE SAUDE GRAJAU', ui: 0, el: 0, usi: 0, cti: 0, elCti: 0, total: 0, pct: '0,00%' },
+        { hospital: 'CLINICA PED BARRA', ui: 1, el: 0, usi: 0, cti: 0, elCti: 0, total: 1, pct: '0,40%' },
+        { hospital: 'SANTA TERESA', ui: 1, el: 0, usi: 0, cti: 0, elCti: 0, total: 1, pct: '0,40%' },
+        { hospital: 'CASA DE SAUDE SAO JOSE', ui: 1, el: 0, usi: 0, cti: 0, elCti: 0, total: 1, pct: '0,40%' },
+        { hospital: 'BADIM', ui: 1, el: 0, usi: 0, cti: 1, elCti: 1, total: 3, pct: '1,21%' },
+        { hospital: 'PASTEUR', ui: 0, el: 0, usi: 0, cti: 0, elCti: 0, total: 0, pct: '0,00%' },
+        { hospital: 'RIO BARRA', ui: 0, el: 0, usi: 0, cti: 0, elCti: 0, total: 0, pct: '0,00%' },
+        { hospital: 'MARIO LIONI', ui: 0, el: 0, usi: 0, cti: 0, elCti: 0, total: 0, pct: '0,00%' },
+        { hospital: 'HCJ', ui: 0, el: 0, usi: 0, cti: 0, elCti: 0, total: 0, pct: '0,00%' },
     ];
     
     const BarChart = ({ meta, metaCti, pctMeta, pctMetaCti }: typeof metaData) => {
@@ -91,6 +137,7 @@ const DadosHospitalizacaoDashboard = () => {
                                 className={`dh-chart-bar result-bar ${pctMetaCti < 0 ? 'negative' : ''}`} 
                                 style={{ height: `${resultMetaCtiHeight}px` }}
                             >
+// FIX: Changed pctCti to pctMetaCti to fix typo.
                                  <span className={`bar-label-side ${pctMetaCti < 0 ? 'negative' : 'positive'}`}>{pctMetaCti.toFixed(2)}%</span>
                             </div>
                         </div>
@@ -129,7 +176,7 @@ const DadosHospitalizacaoDashboard = () => {
                 </div>
             </div>
             
-            <div className="dados-hospitalizacao-grid" style={{marginTop: '24px'}}>
+             <div className="dados-hospitalizacao-grid" style={{marginTop: '24px'}}>
                 <div className="dh-left-column">
                     <Widget title="Carteira">
                         <table className="dh-table">
