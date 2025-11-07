@@ -4,30 +4,20 @@ import AppHeader from '../components/AppHeader.tsx';
 // --- DADOS DA HOSPITALIZAÇÃO SUB-COMPONENT (APP STYLE) ---
 const DadosHospitalizacaoDashboard = () => {
     // Filter State & Handlers
-    const [hospitalFilter, setHospitalFilter] = useState<string[]>([]);
-    const [tempHospitalFilter, setTempHospitalFilter] = useState<string[]>([]);
-    const [isHospitalDropdownOpen, setIsHospitalDropdownOpen] = useState(false);
-    const hospitalDropdownRef = useRef<HTMLDivElement>(null);
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [tempStartDate, setTempStartDate] = useState('');
+    const [tempEndDate, setTempEndDate] = useState('');
 
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (hospitalDropdownRef.current && !hospitalDropdownRef.current.contains(event.target as Node)) {
-                setIsHospitalDropdownOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const uniqueHospitals = ['PRONTONIL', 'JORGE JABER', 'HSF', 'SANTA LUCIA', 'ENIO SERRA', 'ISRAELITA', 'EMCOR', 'VITORIA', 'VISTA ALEGRE', 'CHN', 'PROCOR', 'PRO CARDIACO', 'SMH', 'SÃO MATHEUS', 'SANTA BARBARA', 'SAO LUCAS COPACABANA', 'PRONTOBABY', 'CLIN GAVEA', 'NOSSA SENHORA DO CARMO', 'TEREZINHA DE JESUS', 'ALAMEDA', 'SÃO LUCAS ICARAI', 'DANIEL LIPP', 'CENTRO PED LAGOA', 'DI CAMP', 'SEMIU', 'SAMCORDIS', 'PROCEM', 'QUALITY CARE', 'CASA DE SAUDE GRAJAU', 'CLINICA PED BARRA', 'SANTA TERESA', 'CASA DE SAUDE SAO JOSE', 'BADIM', 'PASTEUR', 'RIO BARRA', 'MARIO LIONI', 'HCJ'];
-
-    const handleApplyFilters = () => setHospitalFilter(tempHospitalFilter);
-    const handleClearFilters = () => {
-        setTempHospitalFilter([]);
-        setHospitalFilter([]);
+    const handleApplyFilters = () => {
+        setStartDate(tempStartDate);
+        setEndDate(tempEndDate);
     };
-    const handleHospitalMultiChange = (hospital: string) => {
-        setTempHospitalFilter(prev => prev.includes(hospital) ? prev.filter(s => s !== hospital) : [...prev, hospital]);
+    const handleClearFilters = () => {
+        setTempStartDate('');
+        setTempEndDate('');
+        setStartDate('');
+        setEndDate('');
     };
 
     const Widget = ({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) => (
@@ -104,69 +94,54 @@ const DadosHospitalizacaoDashboard = () => {
         { hospital: 'HCJ', ui: 0, el: 0, usi: 0, cti: 0, elCti: 0, total: 0, pct: '0,00%' },
     ];
     
-    const BarChart = ({ meta, metaCti, pctMeta, pctMetaCti }: typeof metaData) => {
-        const maxBarHeight = 60; // in px, compacted
-        const maxMetaValue = Math.max(meta, metaCti, 1);
-        
-        const metaHeight = (meta / maxMetaValue) * maxBarHeight;
-        const metaCtiHeight = (metaCti / maxMetaValue) * maxBarHeight;
-
-        const resultMetaHeight = Math.min(Math.abs(pctMeta) * 1.5, maxBarHeight);
-        const resultMetaCtiHeight = Math.min(Math.abs(pctMetaCti) * 1.5, maxBarHeight);
-
-        return (
-            <div className="dh-chart-container">
-                <div className="dh-chart-bars">
-                    <div className="dh-chart-bar-group">
-                        <div className="dh-chart-bar-inner">
-                            <div className="dh-chart-bar" style={{ height: `${metaHeight}px` }}>
-                                <span className="bar-label-top">{meta.toFixed(2)}</span>
-                            </div>
-                            <div className="dh-chart-bar result-bar" style={{ height: `${resultMetaHeight}px` }}>
-                                <span className={`bar-label-side positive`}>{pctMeta.toFixed(2)}%</span>
-                            </div>
-                        </div>
-                        <span className="bar-label-bottom">Meta</span>
-                    </div>
-                    <div className="dh-chart-bar-group">
-                        <div className="dh-chart-bar-inner">
-                            <div className="dh-chart-bar" style={{ height: `${metaCtiHeight}px` }}>
-                                <span className="bar-label-top">{metaCti.toFixed(2)}</span>
-                            </div>
-                             <div 
-                                className={`dh-chart-bar result-bar ${pctMetaCti < 0 ? 'negative' : ''}`} 
-                                style={{ height: `${resultMetaCtiHeight}px` }}
-                            >
-                                <span className={`bar-label-side ${pctMetaCti < 0 ? 'negative' : 'positive'}`}>{pctMetaCti.toFixed(2)}%</span>
-                            </div>
-                        </div>
-                        <span className="bar-label-bottom">Meta CTI</span>
-                    </div>
-                </div>
-            </div>
-        );
+    const parseDdMmYyyyToDate = (dateStr: string): Date | null => {
+        if (!dateStr || !/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) return null;
+        const [day, month, year] = dateStr.split('/').map(Number);
+        return new Date(year, month - 1, day);
     };
+
+    const filteredSolicitacaoData = useMemo(() => {
+        if (!startDate && !endDate) {
+            return solicitacaoData;
+        }
+        
+        const start = startDate ? new Date(startDate) : null;
+        const end = endDate ? new Date(endDate) : null;
+
+        if (start) start.setUTCHours(0, 0, 0, 0);
+        if (end) end.setUTCHours(0, 0, 0, 0);
+
+        return solicitacaoData.filter(item => {
+            const itemDate = parseDdMmYyyyToDate(item.data);
+            if (!itemDate) return false;
+            itemDate.setUTCHours(0, 0, 0, 0);
+
+            const afterStart = start ? itemDate >= start : true;
+            const beforeEnd = end ? itemDate <= end : true;
+            
+            return afterStart && beforeEnd;
+        });
+    }, [solicitacaoData, startDate, endDate]);
 
     return (
         <div style={{ marginTop: '24px' }}>
             <div className="filter-bar">
                 <div className="filter-controls">
-                    <div className="form-group" ref={hospitalDropdownRef}>
-                        <label>Hospital:</label>
-                        <div className="multi-select-dropdown">
-                            <button type="button" className="multi-select-dropdown-button" onClick={() => setIsHospitalDropdownOpen(prev => !prev)}>
-                                {tempHospitalFilter.length === 0 ? 'Todos' : `${tempHospitalFilter.length} selecionados`}
-                            </button>
-                            {isHospitalDropdownOpen && (
-                                <div className="multi-select-dropdown-menu">
-                                    {uniqueHospitals.map(h => (
-                                        <label key={h} className="multi-select-dropdown-item">
-                                            <input type="checkbox" checked={tempHospitalFilter.includes(h)} onChange={() => handleHospitalMultiChange(h)} /> {h}
-                                        </label>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                     <div className="form-group">
+                        <label>Inicial:</label>
+                        <input
+                            type="date"
+                            value={tempStartDate}
+                            onChange={(e) => setTempStartDate(e.target.value)}
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label>Final:</label>
+                        <input
+                            type="date"
+                            value={tempEndDate}
+                            onChange={(e) => setTempEndDate(e.target.value)}
+                        />
                     </div>
                 </div>
                 <div className="filter-actions">
@@ -177,6 +152,27 @@ const DadosHospitalizacaoDashboard = () => {
             
             <div className="dados-hospitalizacao-grid" style={{marginTop: '24px'}}>
                  <div className="dh-left-widgets">
+                     <Widget title="Carteira" className="span-2">
+                        <table className="dh-table">
+                            <thead><tr><th>CARTEIRA</th><th>TOTAL INTERNADO</th><th>RESULTADO</th><th>CTI</th><th>Média Mês</th><th>Média Mês CTI</th></tr></thead>
+                            <tbody><tr><td>{carteiraData.carteira}</td><td>{carteiraData.totalInternado}</td><td>{carteiraData.resultado}</td><td>{carteiraData.cti}</td><td>{carteiraData.mediaMes}</td><td>{carteiraData.mediaMesCti}</td></tr></tbody>
+                        </table>
+                    </Widget>
+                    <Widget title="Internação por Rede" className="span-2">
+                        <table className="dh-table">
+                            <thead><tr><th>INTERNAÇÃO POR REDE</th><th>QTD. INTERNADO</th><th>%OCUPAÇÃO</th></tr></thead>
+                            <tbody>{internacaoRedeData.map(d => <tr key={d.rede}><td>{d.rede}</td><td>{d.qtd}</td><td>{d.ocupacao}</td></tr>)}</tbody>
+                        </table>
+                    </Widget>
+                    <Widget title="Natureza da Guia" className="span-2">
+                        <table className="dh-table">
+                            <thead><tr><th>NATUREZA DA GUIA</th><th>TOTAL</th><th>PAC DIA</th></tr></thead>
+                            <tbody>
+                                {naturezaGuiaData.map((d, i) => <tr key={d.natureza}><td>{d.natureza}</td><td>{d.total}</td><td>{d.pacDia}</td></tr>)}
+                                <tr style={{fontWeight: 'bold', backgroundColor: '#f9fafb'}}><td >SOMA PAC DIA</td><td colSpan={2}>2,52</td></tr>
+                            </tbody>
+                        </table>
+                    </Widget>
                     <Widget title="Regime">
                         <table className="dh-table">
                             <thead><tr><th>REGIME</th><th>QTD. INTERNADO</th></tr></thead>
@@ -189,38 +185,28 @@ const DadosHospitalizacaoDashboard = () => {
                             <tbody>{leitoData.map(d => <tr key={d.leito}><td>{d.leito}</td><td>{d.qtd}</td></tr>)}</tbody>
                         </table>
                     </Widget>
-                    <Widget title="Natureza da Guia" className="span-2">
-                        <table className="dh-table">
-                            <thead><tr><th>NATUREZA DA GUIA</th><th>TOTAL</th><th>PAC DIA</th></tr></thead>
-                            <tbody>
-                                {naturezaGuiaData.map((d, i) => <tr key={d.natureza}><td>{d.natureza}</td><td>{d.total}</td><td>{d.pacDia}</td></tr>)}
-                                <tr style={{fontWeight: 'bold', backgroundColor: '#f9fafb'}}><td >SOMA DIA</td><td colSpan={2}>2,52</td></tr>
-                            </tbody>
-                        </table>
-                    </Widget>
                     <Widget title="Meta x Resultado" className="span-2">
-                        <table className="dh-table">
+                        <table className="dh-table" style={{ background: 'var(--white-color)' }}>
                             <thead>
-                                <tr>
-                                    <th>Indicador</th>
-                                    <th>Meta</th>
-                                    <th>Resultado</th>
+                                <tr style={{ backgroundColor: '#582c83', color: 'white' }}>
+                                    <th style={{ border: '1px solid #582c83' }}>% Meta</th>
+                                    <th style={{ border: '1px solid #582c83' }}>Meta</th>
+                                    <th style={{ border: '1px solid #582c83' }}>Meta CTI</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td>Meta</td>
-                                    <td>{metaData.meta.toFixed(2)}</td>
-                                    <td className="highlight-red">{metaData.pctMeta.toFixed(2)}%</td>
+                                    <td style={{ backgroundColor: '#582c83', color: 'white', fontWeight: 'bold' }}>% Meta</td>
+                                    <td className="pct-meta-pos-bg">{metaData.pctMeta.toFixed(2)}%</td>
+                                    <td className="pct-meta-neg-bg">{metaData.pctMetaCti.toFixed(2)}%</td>
                                 </tr>
                                 <tr>
-                                    <td>Meta CTI</td>
+                                    <td style={{ backgroundColor: '#582c83', color: 'white', fontWeight: 'bold' }}></td>
+                                    <td>{metaData.meta.toFixed(2)}</td>
                                     <td>{metaData.metaCti.toFixed(2)}</td>
-                                    <td className="highlight-green">{metaData.pctMetaCti.toFixed(2)}%</td>
                                 </tr>
                             </tbody>
                         </table>
-                        <BarChart {...metaData} />
                     </Widget>
                     <Widget title="Região" className="span-2">
                         <table className="dh-table">
@@ -241,7 +227,7 @@ const DadosHospitalizacaoDashboard = () => {
                     <Widget title="Acompanhamento Diário de Solicitação">
                         <table className="dh-table">
                             <thead><tr><th>DATA</th><th>QTD. SOLICITAÇÃO</th><th>LIBERADA</th><th>NEGADA</th><th>ELETIVO</th><th>EVITADA</th><th>ENTRADA</th><th>SAIDA</th></tr></thead>
-                            <tbody>{solicitacaoData.map(d => <tr key={d.data}><td>{d.data}</td><td>{d.qtd}</td><td>{d.liberada}</td><td>{d.negada}</td><td>{d.eletivo}</td><td>{d.evitada}</td><td>{d.entrada}</td><td>{d.saida}</td></tr>)}</tbody>
+                            <tbody>{filteredSolicitacaoData.map(d => <tr key={d.data}><td>{d.data}</td><td>{d.qtd}</td><td>{d.liberada}</td><td>{d.negada}</td><td>{d.eletivo}</td><td>{d.evitada}</td><td>{d.entrada}</td><td>{d.saida}</td></tr>)}</tbody>
                         </table>
                     </Widget>
                     <Widget title="Ocupação por Hospital">
