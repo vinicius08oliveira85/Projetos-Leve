@@ -1942,27 +1942,27 @@ legend {
 .dados-hospitalizacao-grid {
     display: grid;
     grid-template-columns: repeat(12, 1fr);
-    gap: 12px;
+    gap: 8px;
 }
 
 .dh-left-column {
     grid-column: span 4;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
 }
 
 .dh-right-column {
     grid-column: span 8;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
 }
 
 .dh-widget {
     background-color: var(--white-color);
     border-radius: 12px;
-    padding: 12px;
+    padding: 10px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
     border: 1px solid var(--border-color);
     display: flex;
@@ -1970,11 +1970,11 @@ legend {
 }
 
 .dh-widget-title {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--primary-color);
-    margin-bottom: 8px;
-    padding-bottom: 8px;
+    margin-bottom: 6px;
+    padding-bottom: 6px;
     border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
 }
@@ -1987,14 +1987,15 @@ legend {
 .dh-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 12px;
+    font-size: 11px;
     border: 1px solid var(--border-color);
 }
 
 .dh-table th,
 .dh-table td {
-    padding: 6px;
-    text-align: left;
+    padding: 4px;
+    text-align: center;
+    vertical-align: middle;
     border: 1px solid var(--border-color);
 }
 
@@ -2004,7 +2005,6 @@ legend {
     background-color: #e9ecef;
 }
 
-.dh-table .text-right { text-align: right; }
 .dh-table .highlight-red { color: var(--error-color); font-weight: 600; }
 .dh-table .highlight-green { color: var(--success-color); font-weight: 600; }
 
