@@ -295,6 +295,75 @@ body {
 }
 
 /* --- Mapa de Internacao (Review Cards) --- */
+.mapa-internacao-layout {
+  padding: 20px 0;
+}
+.top-card-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0;
+}
+.mapa-internacao-layout > .review-cards-container {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  max-width: 1320px;
+  margin-inline: auto;
+}
+.mapa-internacao-layout .review-card {
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+/* Connecting Lines */
+.connecting-lines-container {
+  position: relative;
+  width: 100%;
+  max-width: 1000px;
+  height: 50px;
+  margin: 0 auto;
+}
+.connecting-lines-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-1px);
+    width: 2px;
+    height: 50%;
+    background-color: #cbd5e0;
+}
+.horizontal-line {
+  position: absolute;
+  top: 50%;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background-color: #cbd5e0;
+}
+.vertical-line {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 50%;
+  background-color: #cbd5e0;
+}
+.vertical-line::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: -4px;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 8px solid #cbd5e0;
+}
+.v-line-1 { left: 12.5%; }
+.v-line-2 { left: 37.5%; }
+.v-line-3 { left: 62.5%; }
+.v-line-4 { left: 87.5%; }
+
+
 .review-cards-container {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -434,6 +503,14 @@ body {
 .theme-blue .review-card-badge { background-color: var(--primary-color); }
 .theme-blue .review-card-button { background-color: var(--primary-color); }
 
+.theme-dark-blue {
+    background-color: #EBF4FF;
+    border-color: #4299E1;
+}
+.theme-dark-blue .review-card-badge { background-color: var(--primary-color); }
+.theme-dark-blue .review-card-button { background-color: var(--primary-color); }
+.theme-dark-blue .review-card-main-count { color: var(--primary-color); }
+
 .theme-orange {
     background-color: #FFF6ED;
     border-color: #FEDFBB;
@@ -454,6 +531,13 @@ body {
 }
 .theme-purple .review-card-badge { background-color: var(--status-purple-text); }
 .theme-purple .review-card-button { background-color: var(--status-purple-text); }
+
+.theme-teal {
+    background-color: #F0FDFA;
+    border-color: #A7F3D0;
+}
+.theme-teal .review-card-badge { background-color: #14B8A6; }
+.theme-teal .review-card-button { background-color: #14B8A6; }
 
 
 /* --- Foto do Dia --- */
@@ -2093,6 +2177,16 @@ legend {
 }
 
 /* --- Responsive Design --- */
+@media (max-width: 1350px) {
+  .mapa-internacao-layout > .review-cards-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .connecting-lines-container {
+    display: none; /* Hide complex connectors on smaller screens */
+  }
+}
+
+
 @media (max-width: 800px) {
     /* General Layout */
     .page-container {
@@ -2276,5 +2370,8 @@ legend {
     }
     .dh-left-widgets > .dh-widget.span-2 {
         grid-column: span 1;
+    }
+    .mapa-internacao-layout > .review-cards-container {
+      grid-template-columns: 1fr;
     }
 }

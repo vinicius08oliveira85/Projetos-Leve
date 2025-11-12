@@ -275,6 +275,20 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
     
         return stats;
     }, [patients]);
+
+    const totalStats = useMemo(() => {
+        const initialValue = { total: 0, emFila: 0, auditados: 0, altaReplan: 0, atrasado: 0 };
+        // FIX: The reduce function's `curr` parameter was inferred as 'unknown'.
+        // I have explicitly typed `curr` to match the structure of the values in `reviewStats`.
+        return Object.values(reviewStats).reduce((acc: typeof initialValue, curr: typeof initialValue) => {
+            acc.total += curr.total;
+            acc.emFila += curr.emFila;
+            acc.auditados += curr.auditados;
+            acc.altaReplan += curr.altaReplan;
+            acc.atrasado += curr.atrasado;
+            return acc;
+        }, initialValue);
+    }, [reviewStats]);
     
     const filteredPatients = useMemo(() => {
         const today = new Date();
@@ -346,7 +360,12 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
             });
     }, [patients, criticidadeFilter, dateFilter, hospitalFilter, guiaStatusFilter, patientStatusFilter, statusFilter, altaReplanFilter, nameSearch]);
 
-    const handleSelectReview = (criticidade: Patient['criticidade'][]) => {
+    const handleSelectReview = (criticidade: Patient['criticidade'][] | null) => {
+        if (criticidade === null) {
+            setCriticidadeFilter(null);
+            return;
+        }
+
         if (JSON.stringify(criticidadeFilter) === JSON.stringify(criticidade)) {
             setCriticidadeFilter(null);
         } else {
@@ -454,6 +473,7 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
     const handleGuiaStatusMultiChange = (status: GuiaStatus) => {
         setTempGuiaStatusFilter(prev => {
             const isSelected = prev.includes(status);
+            // FIX: The variable 's' was not defined in this scope. Changed to 'status'.
             return isSelected ? prev.filter(s => s !== status) : [...prev, status];
         });
     };
@@ -491,7 +511,7 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
     };
 
 
-    const ReviewCard = ({ title, subtitle, badgeLabel, badgeValue, totalCount, subCounts, theme, onClick, isActive }: { 
+    const ReviewCard = ({ title, subtitle, badgeLabel, badgeValue, totalCount, subCounts, theme, onClick, isActive, className }: { 
         title: string; 
         subtitle?: string;
         badgeLabel: string;
@@ -501,8 +521,9 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
         theme: string; 
         onClick: () => void;
         isActive: boolean;
+        className?: string;
     }) => (
-        <div className={`review-card theme-${theme} ${isActive ? 'active' : ''}`} onClick={onClick}>
+        <div className={`review-card theme-${theme} ${isActive ? 'active' : ''} ${className || ''}`} onClick={onClick}>
             <div className="review-card-header">
                 <div className="review-card-title-group">
                     <h3 className="review-card-title">{title}</h3>
@@ -545,48 +566,71 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                 subtitle={subtitle}
                 onBack={onBack}
             />
-            <div className="review-cards-container">
-                 <ReviewCard 
-                    title="Revisão Padrão" 
-                    badgeLabel="Criticidade"
-                    badgeValue="0"
-                    totalCount={reviewStats.padrao.total}
-                    subCounts={reviewStats.padrao}
-                    theme="purple" 
-                    onClick={() => handleSelectReview(['Revisão Padrão'])} 
-                    isActive={JSON.stringify(criticidadeFilter) === JSON.stringify(['Revisão Padrão'])}
-                 />
-                 <ReviewCard 
-                    title="Revisão diária"
-                    subtitle="24h"
-                    badgeLabel="Criticidade"
-                    badgeValue="1"
-                    totalCount={reviewStats.daily.total}
-                    subCounts={reviewStats.daily}
-                    theme="blue" 
-                    onClick={() => handleSelectReview(['Diário 24h'])}
-                    isActive={JSON.stringify(criticidadeFilter) === JSON.stringify(['Diário 24h'])}
-                 />
-                 <ReviewCard 
-                    title="Revisão em 48h" 
-                    badgeLabel="Criticidade"
-                    badgeValue="2"
-                    totalCount={reviewStats.h48.total}
-                    subCounts={reviewStats.h48}
-                    theme="orange" 
-                    onClick={() => handleSelectReview(['48h'])}
-                    isActive={JSON.stringify(criticidadeFilter) === JSON.stringify(['48h'])}
-                 />
-                 <ReviewCard 
-                    title="Revisão em 72h" 
-                    badgeLabel="Criticidade"
-                    badgeValue="3"
-                    totalCount={reviewStats.h72.total}
-                    subCounts={reviewStats.h72}
-                    theme="green" 
-                    onClick={() => handleSelectReview(['72h'])}
-                    isActive={JSON.stringify(criticidadeFilter) === JSON.stringify(['72h'])}
-                 />
+            <div className="mapa-internacao-layout">
+                <div className="top-card-wrapper">
+                    <ReviewCard
+                        title="Total de Pacientes"
+                        badgeLabel="GERAL"
+                        badgeValue=" "
+                        totalCount={totalStats.total}
+                        subCounts={totalStats}
+                        theme="dark-blue"
+                        onClick={() => handleSelectReview(null)}
+                        isActive={criticidadeFilter === null}
+                     />
+                </div>
+
+                <div className="connecting-lines-container">
+                    <div className="horizontal-line"></div>
+                    <div className="vertical-line v-line-1"></div>
+                    <div className="vertical-line v-line-2"></div>
+                    <div className="vertical-line v-line-3"></div>
+                    <div className="vertical-line v-line-4"></div>
+                </div>
+
+                 <div className="review-cards-container">
+                     <ReviewCard 
+                        title="Revisão Padrão" 
+                        badgeLabel="Criticidade"
+                        badgeValue="0"
+                        totalCount={reviewStats.padrao.total}
+                        subCounts={reviewStats.padrao}
+                        theme="purple" 
+                        onClick={() => handleSelectReview(['Revisão Padrão'])} 
+                        isActive={JSON.stringify(criticidadeFilter) === JSON.stringify(['Revisão Padrão'])}
+                     />
+                     <ReviewCard 
+                        title="Revisão diária"
+                        subtitle="24h"
+                        badgeLabel="Criticidade"
+                        badgeValue="1"
+                        totalCount={reviewStats.daily.total}
+                        subCounts={reviewStats.daily}
+                        theme="teal" 
+                        onClick={() => handleSelectReview(['Diário 24h'])}
+                        isActive={JSON.stringify(criticidadeFilter) === JSON.stringify(['Diário 24h'])}
+                     />
+                     <ReviewCard 
+                        title="Revisão em 48h" 
+                        badgeLabel="Criticidade"
+                        badgeValue="2"
+                        totalCount={reviewStats.h48.total}
+                        subCounts={reviewStats.h48}
+                        theme="orange" 
+                        onClick={() => handleSelectReview(['48h'])}
+                        isActive={JSON.stringify(criticidadeFilter) === JSON.stringify(['48h'])}
+                     />
+                     <ReviewCard 
+                        title="Revisão em 72h" 
+                        badgeLabel="Criticidade"
+                        badgeValue="3"
+                        totalCount={reviewStats.h72.total}
+                        subCounts={reviewStats.h72}
+                        theme="green" 
+                        onClick={() => handleSelectReview(['72h'])}
+                        isActive={JSON.stringify(criticidadeFilter) === JSON.stringify(['72h'])}
+                     />
+                </div>
             </div>
 
             <div className="filter-bar" style={{ marginTop: '20px', marginBottom: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, borderBottom: '1px solid var(--border-color)', flexDirection: 'column', alignItems: 'stretch', gap: '16px'}}>

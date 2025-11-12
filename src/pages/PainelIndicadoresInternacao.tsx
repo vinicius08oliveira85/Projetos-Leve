@@ -20,10 +20,11 @@ const DadosHospitalizacaoDashboard = () => {
         setEndDate('');
     };
 
-    const Widget = ({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) => (
+    // Fix: Make children optional to handle cases where Widget is used without content.
+    const Widget = ({ title, children, className }: { title: string; children?: React.ReactNode; className?: string }) => (
         <div className={`dh-widget ${className || ''}`}>
             <h3 className="dh-widget-title">{title}</h3>
-            <div className="dh-widget-content">{children}</div>
+            {children && <div className="dh-widget-content">{children}</div>}
         </div>
     );
     
