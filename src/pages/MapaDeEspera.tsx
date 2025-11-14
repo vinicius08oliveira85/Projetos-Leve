@@ -773,49 +773,55 @@ const MapaDeEspera = ({ onBack, onSelectPatient, user, patients, onUpdatePatient
                 <table className="patient-table">
                    <thead>
                         <tr>
-                            <th>DETALHES</th>
-                            <th>GUIA</th>
-                            <th>NOME DO PACIENTE</th>
-                            <th>DATA IH</th>
-                            <th>ALTA PREVISTA</th>
-                            <th>ALTA REPLAN</th>
-                            <th>CRITICIDADE</th>
-                            <th>HOSPITAL DESTINO</th>
-                            <th>LEITO DO DIA</th>
-                            <th>PENDÊNCIAS E ESPERA</th>
-                            <th>OBSERVAÇÕES</th>
+                            <th>Detalhes</th>
+                            <th>Guia</th>
+                            <th>Nome do Paciente</th>
+                            <th>Data IH</th>
+                            <th>Hospital Destino</th>
+                            <th>Tipo de Espera</th>
+                            <th>Desde</th>
+                            <th>Dias de Espera</th>
+                            <th>Leito do dia</th>
+                            <th>Observações</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredPatients.map(p => (
-                            <tr key={p.id}>
-                                <td>
-                                    <button className="icon-button" onClick={() => onSelectPatient(p)} aria-label={`Detalhes de ${p.nome}`} title="Acessar Detalhes da Guia">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                    </button>
-                                </td>
-                                <td>{p.guia}</td>
-                                <td>{p.nome}</td>
-                                <td>{formatDateDdMmYy(p.dataIH)}</td>
-                                <td>{formatDateDdMmYy(p.altaPrev)}</td>
-                                <td>{formatDateDdMmYy(p.altaReplan)}</td>
-                                <td>
-                                    <span style={p.criticidade === 'Revisão Padrão' ? {} : { color: 'var(--status-red-text)', fontWeight: 'bold' }}>
-                                        {criticidadeDisplayMap[p.criticidade]}
-                                    </span>
-                                </td>
-                                <td>{p.hospitalDestino}</td>
-                                <td>{p.leitoHoje}</td>
-                                <td className="pendencias-cell" title={(Object.keys(p.esperas) as Array<keyof Esperas>).filter(k => p.esperas[k]).join(', ')}>
-                                    <PendenciasEsperaList esperas={p.esperas} />
-                                </td>
-                                <td>
-                                    <button className="icon-button" onClick={() => setObservacoesPatient(p)} aria-label={`Observações de ${p.nome}`} title="Ver/Adicionar Observações">
-                                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
+                        {filteredPatients.map(p => {
+                            const waitDates: Date[] = [];
+                            if (p.esperas.cirurgia && p.desdeCirurgia) waitDates.push(new Date(p.desdeCirurgia));
+                            if (p.esperas.exame && p.desdeExame) waitDates.push(new Date(p.desdeExame));
+                            if (p.esperas.parecer && p.desdeParecer) waitDates.push(new Date(p.desdeParecer));
+                            if (p.esperas.desospitalizacao && p.desdeDesospitalizacao) waitDates.push(new Date(p.desdeDesospitalizacao));
+                            
+                            const earliestDate = waitDates.length > 0 ? new Date(Math.min(...waitDates.map(d => d.getTime()))) : null;
+                            const desdeDateString = earliestDate ? earliestDate.toISOString().split('T')[0] : undefined;
+                            const diasDeEspera = calculateDaysWaiting(desdeDateString);
+
+                            return (
+                                <tr key={p.id}>
+                                    <td>
+                                        <button className="icon-button" onClick={() => onSelectPatient(p)} aria-label={`Detalhes de ${p.nome}`} title="Acessar Detalhes da Guia">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        </button>
+                                    </td>
+                                    <td>{p.guia}</td>
+                                    <td>{p.nome}</td>
+                                    <td>{formatDateDdMmYy(p.dataIH)}</td>
+                                    <td>{p.hospitalDestino}</td>
+                                    <td className="pendencias-cell" title={(Object.keys(p.esperas) as Array<keyof Esperas>).filter(k => p.esperas[k]).map(k => k.charAt(0).toUpperCase() + k.slice(1)).join(', ')}>
+                                        <PendenciasEsperaList esperas={p.esperas} />
+                                    </td>
+                                    <td>{formatDateDdMmYy(desdeDateString)}</td>
+                                    <td className="days-cell">{diasDeEspera !== 'N/A' ? `${diasDeEspera} dias` : 'N/A'}</td>
+                                    <td>{p.leitoHoje}</td>
+                                    <td>
+                                        <button className="icon-button" onClick={() => setObservacoesPatient(p)} aria-label={`Observações de ${p.nome}`} title="Ver/Adicionar Observações">
+                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                                        </button>
+                                    </td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
             );
