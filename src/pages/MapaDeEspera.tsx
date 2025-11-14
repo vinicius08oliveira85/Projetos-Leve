@@ -371,7 +371,7 @@ const DetalhesEsperaDesospitalizacaoModal = ({ patient, onClose, user, onUpdateP
     );
 };
 
-const ObservacoesModal = ({ patient: initialPatient, onClose, user, onUpdatePatient, showToast }: {
+const ResumoClinicoModal = ({ patient: initialPatient, onClose, user, onUpdatePatient, showToast }: {
     patient: Patient;
     onClose: () => void;
     user: User;
@@ -598,7 +598,7 @@ const MapaDeEspera = ({ onBack, onSelectPatient, user, patients, onUpdatePatient
     const [selectedExamPatient, setSelectedExamPatient] = useState<Patient | null>(null);
     const [selectedParecerPatient, setSelectedParecerPatient] = useState<Patient | null>(null);
     const [selectedDesospitalizacaoPatient, setSelectedDesospitalizacaoPatient] = useState<Patient | null>(null);
-    const [observacoesPatient, setObservacoesPatient] = useState<Patient | null>(null);
+    const [resumoClinicoPatient, setResumoClinicoPatient] = useState<Patient | null>(null);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -782,7 +782,7 @@ const MapaDeEspera = ({ onBack, onSelectPatient, user, patients, onUpdatePatient
                             <th>Desde</th>
                             <th>Dias de Espera</th>
                             <th>Leito do dia</th>
-                            <th>Observações</th>
+                            <th>Resumo clínico</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -815,7 +815,7 @@ const MapaDeEspera = ({ onBack, onSelectPatient, user, patients, onUpdatePatient
                                     <td className="days-cell">{diasDeEspera !== 'N/A' ? `${diasDeEspera} dias` : 'N/A'}</td>
                                     <td>{p.leitoHoje}</td>
                                     <td>
-                                        <button className="icon-button" onClick={() => setObservacoesPatient(p)} aria-label={`Observações de ${p.nome}`} title="Ver/Adicionar Observações">
+                                        <button className="icon-button" onClick={() => setResumoClinicoPatient(p)} aria-label={`Resumo clínico de ${p.nome}`} title="Ver/Adicionar Resumo clínico">
                                              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                                         </button>
                                     </td>
@@ -1041,10 +1041,10 @@ const MapaDeEspera = ({ onBack, onSelectPatient, user, patients, onUpdatePatient
                     showToast={showToast}
                 />
             )}
-             {observacoesPatient && (
-                <ObservacoesModal 
-                    patient={observacoesPatient}
-                    onClose={() => setObservacoesPatient(null)}
+             {resumoClinicoPatient && (
+                <ResumoClinicoModal 
+                    patient={resumoClinicoPatient}
+                    onClose={() => setResumoClinicoPatient(null)}
                     user={user}
                     onUpdatePatient={onUpdatePatient}
                     showToast={showToast}
