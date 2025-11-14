@@ -799,7 +799,7 @@ const MapaDeEspera = ({ onBack, onSelectPatient, user, patients, onUpdatePatient
                 <table className="patient-table">
                    <thead>
                         <tr>
-                            <th>Detalhes</th>
+                            <th>Detalhes da Guia</th>
                             <th>Guia</th>
                             <th>Nome do Paciente</th>
                             <th>Data IH</th>
@@ -826,7 +826,7 @@ const MapaDeEspera = ({ onBack, onSelectPatient, user, patients, onUpdatePatient
                             return (
                                 <tr key={p.id}>
                                     <td>
-                                        <button className="icon-button" onClick={() => onSelectPatient(p)} aria-label={`Detalhes de ${p.nome}`} title="Acessar Detalhes da Guia">
+                                        <button className="icon-button" onClick={() => onSelectPatient(p)} aria-label={`Detalhes da Guia de ${p.nome}`} title="Acessar Detalhes da Guia">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                                         </button>
                                     </td>
