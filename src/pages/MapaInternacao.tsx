@@ -93,11 +93,12 @@ const getAuditStatus = (patient: Patient, referenceDate: Date): 'Auditado' | 'Em
 };
 
 
-const LeitoModal = ({ patient: initialPatient, user, onClose, onSave }: {
+const LeitoModal = ({ patient: initialPatient, user, onClose, onSave, showToast }: {
     patient: Patient;
     user: User;
     onClose: () => void;
     onSave: (updatedPatient: Patient, user: User) => void;
+    showToast: (message: string, type?: 'success'|'error') => void;
 }) => {
     const [patient, setPatient] = useState<Patient>(initialPatient);
 
@@ -113,7 +114,7 @@ const LeitoModal = ({ patient: initialPatient, user, onClose, onSave }: {
                     <button onClick={onClose} className="leito-modal-close-btn">&times;</button>
                 </div>
                 <div className="leito-modal-body" style={{ marginTop: '20px' }}>
-                    <GestaoDeLeito user={user} patient={patient} onPatientChange={setPatient} />
+                    <GestaoDeLeito user={user} patient={patient} onPatientChange={setPatient} showToast={showToast} />
                 </div>
                 <div className="details-actions" style={{ marginTop: '20px', justifyContent: 'flex-end', display: 'flex' }}>
                     <button onClick={onClose} className="modal-button cancel" style={{ marginRight: '10px' }}>Cancelar</button>
@@ -480,14 +481,12 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
     
     const handleSaveAllChanges = () => {
         let validationFailed = false;
-
         const updatedPatientsList: Patient[] = [];
 
         for (const patientIdStr in editedPatients) {
             const patientId = Number(patientIdStr);
             const changes = editedPatients[patientIdStr];
             const originalPatient = patients.find(p => p.id === patientId)!;
-            
             const finalData = { ...originalPatient, ...changes };
 
             if (finalData.altaAutorizada && !finalData.motivoAlta) {
@@ -859,6 +858,7 @@ const MapaInternacao = ({ onBack, user, patients, onSelectPatient, onSavePatient
                     user={user}
                     onClose={() => setEditingLeitoPatient(null)}
                     onSave={handleSaveLeito}
+                    showToast={showToast}
                 />
             )}
         </div>

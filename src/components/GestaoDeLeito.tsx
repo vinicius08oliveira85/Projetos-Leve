@@ -5,7 +5,12 @@ import { formatDateDdMmYy } from '../utils/helpers.ts';
 const leitoOptions: LeitoType[] = ['CTI', 'CTI PED', 'CTI NEO', 'USI', 'USI PED', 'UI', 'UI PSQ'];
 const leitoDoDiaOptions: (LeitoType | 'Alta')[] = [...leitoOptions, 'Alta'];
 
-const GestaoDeLeito = ({ user, patient, onPatientChange }: { user: User, patient: Patient, onPatientChange: (p: Patient) => void }) => {
+const GestaoDeLeito = ({ user, patient, onPatientChange, showToast }: { 
+    user: User, 
+    patient: Patient, 
+    onPatientChange: (p: Patient) => void,
+    showToast: (message: string, type?: 'success'|'error') => void
+}) => {
     const [newDate, setNewDate] = useState('');
     const [newLeitoDoDia, setNewLeitoDoDia] = useState<LeitoType | 'Alta'>('UI');
 
@@ -19,9 +24,29 @@ const GestaoDeLeito = ({ user, patient, onPatientChange }: { user: User, patient
     const handleAddRecord = (e: React.FormEvent) => {
         e.preventDefault();
         if (!newDate) {
-            alert('Por favor, selecione uma data.');
+            showToast('Por favor, selecione uma data.', 'error');
             return;
         }
+        if (newDate < patient.dataIH) {
+            showToast('A data do registro não pode ser anterior à data de internação.', 'error');
+            return;
+        }
+        const today = new Date();
+        today.setUTCHours(0,0,0,0);
+        const selectedDate = new Date(newDate);
+        // Adjust for timezone differences by getting UTC date parts
+        const selectedUTCDate = new Date(Date.UTC(selectedDate.getUTCFullYear(), selectedDate.getUTCMonth(), selectedDate.getUTCDate()));
+
+
+        if (selectedUTCDate > today) {
+            showToast('A data do registro não pode ser no futuro.', 'error');
+            return;
+        }
+        if ((patient.leitoHistory || []).some(h => h.date === newDate)) {
+            showToast('Já existe um registro para esta data.', 'error');
+            return;
+        }
+
 
         const newRecord: LeitoRecord = {
             id: Date.now(),

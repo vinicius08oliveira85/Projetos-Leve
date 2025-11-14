@@ -17,7 +17,7 @@ const DetalhesEsperaCirurgiaModal = ({ patient, onClose, user, onUpdatePatient, 
     onClose: () => void;
     user: User;
     onUpdatePatient: (patient: Patient, user: User) => void;
-    showToast: (message: string) => void;
+    showToast: (message: string, type?: 'success' | 'error') => void;
 }) => {
     const [details, setDetails] = useState<EsperaCirurgiaDetalhes>(patient.esperaCirurgiaDetalhes || {});
 
@@ -27,6 +27,23 @@ const DetalhesEsperaCirurgiaModal = ({ patient, onClose, user, onUpdatePatient, 
     };
 
     const handleSave = () => {
+        const dates = [
+            { name: 'Data Início Espera', value: details.dataInicio },
+            { name: 'Envio do Pedido', value: details.envioPedido },
+            { name: 'OPME Solicitado', value: details.opmeSolicitado },
+            { name: 'OPME Recebido', value: details.opmeRecebido },
+            { name: 'Data do Agendamento', value: details.dataAgendamento },
+            { name: 'Data de Realização', value: details.dataRealizacao },
+            { name: 'Data Fim Espera', value: details.dataFim },
+        ].filter(d => d.value);
+
+        for (let i = 0; i < dates.length - 1; i++) {
+            if (dates[i].value! > dates[i + 1].value!) {
+                showToast(`Erro de validação: A data '${dates[i + 1].name}' não pode ser anterior à data '${dates[i].name}'.`, 'error');
+                return;
+            }
+        }
+        
         const updatedPatient = {
             ...patient,
             esperaCirurgiaDetalhes: details
@@ -166,7 +183,7 @@ const DetalhesEsperaExameModal = ({ patient, onClose, user, onUpdatePatient, sho
     onClose: () => void;
     user: User;
     onUpdatePatient: (patient: Patient, user: User) => void;
-    showToast: (message: string) => void;
+    showToast: (message: string, type?: 'success' | 'error') => void;
 }) => {
     const [details, setDetails] = useState<EsperaExameDetalhes>(patient.esperaExameDetalhes || {});
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -174,6 +191,20 @@ const DetalhesEsperaExameModal = ({ patient, onClose, user, onUpdatePatient, sho
         setDetails(prev => ({ ...prev, [name]: value }));
     };
     const handleSave = () => {
+        const dates = [
+            { name: 'Data Início', value: details.dataInicio },
+            { name: 'Envio do Pedido', value: details.envioPedido },
+            { name: 'Laudo', value: details.laudo },
+            { name: 'Laudo Liberado', value: details.laudoLiberado },
+            { name: 'Data Fim', value: details.dataFim },
+        ].filter(d => d.value);
+    
+        for (let i = 0; i < dates.length - 1; i++) {
+            if (dates[i].value! > dates[i + 1].value!) {
+                showToast(`Erro de validação: A data '${dates[i + 1].name}' não pode ser anterior à data '${dates[i].name}'.`, 'error');
+                return;
+            }
+        }
         const updatedPatient = { ...patient, esperaExameDetalhes: details };
         onUpdatePatient(updatedPatient, user);
         showToast('Alterações salvas com sucesso!');
@@ -247,7 +278,7 @@ const DetalhesEsperaParecerModal = ({ patient, onClose, user, onUpdatePatient, s
     onClose: () => void;
     user: User;
     onUpdatePatient: (patient: Patient, user: User) => void;
-    showToast: (message: string) => void;
+    showToast: (message: string, type?: 'success' | 'error') => void;
 }) => {
     const [details, setDetails] = useState<EsperaParecerDetalhes>(patient.esperaParecerDetalhes || {});
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -255,6 +286,10 @@ const DetalhesEsperaParecerModal = ({ patient, onClose, user, onUpdatePatient, s
         setDetails(prev => ({ ...prev, [name]: value }));
     };
     const handleSave = () => {
+        if (details.dataSolicitacao && details.dataResposta && details.dataSolicitacao > details.dataResposta) {
+            showToast('Erro de validação: A Data da Resposta não pode ser anterior à Data da Solicitação.', 'error');
+            return;
+        }
         const updatedPatient = { ...patient, esperaParecerDetalhes: details };
         onUpdatePatient(updatedPatient, user);
         showToast('Alterações salvas com sucesso!');
@@ -486,6 +521,16 @@ const ResumoClinicoModal = ({ patient: initialPatient, onClose, user, onUpdatePa
         e.preventDefault();
         
         if (newHistoryDate && diarioText) {
+             if (newHistoryDate < patient.dataIH) {
+                showToast('A data da anotação não pode ser anterior à data de internação.', 'error');
+                return;
+            }
+            const today = new Date().toISOString().split('T')[0];
+            if (newHistoryDate > today) {
+                showToast('A data da anotação não pode ser no futuro.', 'error');
+                return;
+            }
+
              const newEntry: HistoryEntry = {
                 data: newHistoryDate,
                 responsavel: user.name,

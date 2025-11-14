@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Patient, User, EsperaCirurgiaDetalhes, HistoryEntry } from '../types/index.ts';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Patient, User, EsperaCirurgiaDetalhes, LeitoType, HistoryEntry } from '../types/index.ts';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { formatDateDdMmYy, calculateDaysWaiting, calculateDaysBetween, createBlob } from '../utils/helpers.ts';
 import AppHeader from '../components/AppHeader.tsx';
@@ -10,7 +10,7 @@ const DetalhesEsperaCirurgiaModal = ({ patient, onClose, user, onUpdatePatient, 
     onClose: () => void;
     user: User;
     onUpdatePatient: (patient: Patient, user: User) => void;
-    showToast: (message: string) => void;
+    showToast: (message: string, type?: 'success' | 'error') => void;
 }) => {
     const [details, setDetails] = useState<EsperaCirurgiaDetalhes>(patient.esperaCirurgiaDetalhes || {});
 
@@ -20,6 +20,23 @@ const DetalhesEsperaCirurgiaModal = ({ patient, onClose, user, onUpdatePatient, 
     };
 
     const handleSave = () => {
+        const dates = [
+            { name: 'Data Início Espera', value: details.dataInicio },
+            { name: 'Envio do Pedido', value: details.envioPedido },
+            { name: 'OPME Solicitado', value: details.opmeSolicitado },
+            { name: 'OPME Recebido', value: details.opmeRecebido },
+            { name: 'Data do Agendamento', value: details.dataAgendamento },
+            { name: 'Data de Realização', value: details.dataRealizacao },
+            { name: 'Data Fim Espera', value: details.dataFim },
+        ].filter(d => d.value);
+
+        for (let i = 0; i < dates.length - 1; i++) {
+            if (dates[i].value! > dates[i + 1].value!) {
+                showToast(`Erro de validação: A data '${dates[i + 1].name}' não pode ser anterior à data '${dates[i].name}'.`, 'error');
+                return;
+            }
+        }
+
         const updatedPatient = {
             ...patient,
             esperaCirurgiaDetalhes: details
@@ -269,6 +286,16 @@ const ResumoClinicoModal = ({ patient: initialPatient, onClose, user, onUpdatePa
         e.preventDefault();
         
         if (newHistoryDate && diarioText) {
+             if (newHistoryDate < patient.dataIH) {
+                showToast('A data da anotação não pode ser anterior à data de internação.', 'error');
+                return;
+            }
+            const today = new Date().toISOString().split('T')[0];
+            if (newHistoryDate > today) {
+                showToast('A data da anotação não pode ser no futuro.', 'error');
+                return;
+            }
+
              const newEntry: HistoryEntry = {
                 data: newHistoryDate,
                 responsavel: user.name,
@@ -388,7 +415,45 @@ const PacientesAguardandoCirurgia = ({
     
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
     const [resumoClinicoPatient, setResumoClinicoPatient] = useState<Patient | null>(null);
-    const surgeryPatients = patients.filter(p => p.esperas.cirurgia);
+
+    // Temporary filters
+    const [hospitalFilter, setHospitalFilter] = useState('Todos');
+    const [leitoFilter, setLeitoFilter] = useState('Todos');
+
+    // Applied filters
+    const [appliedFilters, setAppliedFilters] = useState({
+        hospital: 'Todos',
+        leito: 'Todos',
+    });
+    
+    const surgeryPatients = useMemo(() => patients.filter(p => p.esperas.cirurgia), [patients]);
+    const uniqueHospitals = useMemo(() => ['Todos', ...new Set(surgeryPatients.map(p => p.hospitalDestino))], [surgeryPatients]);
+    const leitoOptions: (LeitoType | 'Todos')[] = ['Todos', 'CTI', 'CTI PED', 'CTI NEO', 'USI', 'USI PED', 'UI', 'UI PSQ', 'EL'];
+
+
+    const filteredPatients = useMemo(() => {
+        return surgeryPatients.filter(p => {
+            const hospitalMatch = appliedFilters.hospital === 'Todos' || p.hospitalDestino === appliedFilters.hospital;
+            const leitoMatch = appliedFilters.leito === 'Todos' || p.leitoHoje === appliedFilters.leito;
+            return hospitalMatch && leitoMatch;
+        });
+    }, [surgeryPatients, appliedFilters]);
+
+    const handleApplyFilters = () => {
+        setAppliedFilters({
+            hospital: hospitalFilter,
+            leito: leitoFilter,
+        });
+    };
+
+    const handleClearFilters = () => {
+        setHospitalFilter('Todos');
+        setLeitoFilter('Todos');
+        setAppliedFilters({
+            hospital: 'Todos',
+            leito: 'Todos',
+        });
+    };
 
     return (
         <div className="page-container">
@@ -397,6 +462,32 @@ const PacientesAguardandoCirurgia = ({
                 subtitle="Lista dos pacientes que aguardam por uma cirurgia."
                 onBack={onBack}
             />
+             <div className="content-box" style={{ background: '#F0F9FF', padding: '16px', marginTop: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                    <div style={{ display: 'flex', gap: '24px', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <div className="form-group" style={{marginBottom: 0}}>
+                            <label>Hospital Destino:</label>
+                            <select value={hospitalFilter} onChange={(e) => setHospitalFilter(e.target.value)}>
+                                {uniqueHospitals.map(h => <option key={h} value={h}>{h}</option>)}
+                            </select>
+                        </div>
+                        <div className="form-group" style={{marginBottom: 0}}>
+                            <label>Leito do dia:</label>
+                            <select value={leitoFilter} onChange={(e) => setLeitoFilter(e.target.value)}>
+                                {leitoOptions.map(l => <option key={l} value={l}>{l}</option>)}
+                            </select>
+                        </div>
+                         <div className="filter-actions" style={{display: 'flex', gap: '10px'}}>
+                            <button onClick={handleClearFilters} className="secondary-action-button">Limpar</button>
+                            <button onClick={handleApplyFilters} className="save-button">Aplicar Filtros</button>
+                        </div>
+                    </div>
+                    <div className="filter-totalizer">
+                        <span className="totalizer-label">TOTAL</span>
+                        <span className="totalizer-value">{filteredPatients.length}</span>
+                    </div>
+                </div>
+            </div>
              <div className="table-container" style={{marginTop: '20px'}}>
                 <table className="patient-table">
                     <thead>
@@ -414,11 +505,14 @@ const PacientesAguardandoCirurgia = ({
                         </tr>
                     </thead>
                     <tbody>
-                        {surgeryPatients.map(p => {
+                        {filteredPatients.map(p => {
                             const diasDeEspera = calculateDaysWaiting(p.desdeCirurgia);
+                            const latestLeitoRecord = [...(p.leitoHistory || [])]
+                                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                            const leitoDoDia = latestLeitoRecord ? latestLeitoRecord.leitoDoDia : p.leitoAdmissao;
                             return (
                                 <tr key={p.id}>
-                                    <td>
+                                     <td>
                                         <button className="icon-button" onClick={() => setSelectedPatient(p)} aria-label={`Detalhes da Cirurgia de ${p.nome}`}>
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                                         </button>
@@ -432,7 +526,7 @@ const PacientesAguardandoCirurgia = ({
                                     <td className="days-cell">
                                         {diasDeEspera !== 'N/A' ? `${diasDeEspera} dias` : 'N/A'}
                                     </td>
-                                    <td>{p.leitoHoje}</td>
+                                    <td>{leitoDoDia}</td>
                                     <td>
                                         <button className="icon-button" onClick={() => setResumoClinicoPatient(p)} aria-label={`Resumo clínico de ${p.nome}`} title="Ver/Adicionar Resumo clínico">
                                              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
@@ -454,7 +548,6 @@ const PacientesAguardandoCirurgia = ({
                     showToast={showToast}
                 />
             )}
-            
             {resumoClinicoPatient && (
                 <ResumoClinicoModal 
                     patient={resumoClinicoPatient}

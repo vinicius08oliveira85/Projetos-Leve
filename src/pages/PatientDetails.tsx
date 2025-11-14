@@ -252,6 +252,15 @@ const PatientDetails = ({ patient: initialPatient, allPatients, onBack, user, on
         e.preventDefault();
         
         if (newHistoryDate && diarioText) {
+            if (newHistoryDate < patient.dataIH) {
+                showToast('A data da anotação não pode ser anterior à data de internação.', 'error');
+                return;
+            }
+            if (newHistoryDate > new Date().toISOString().split('T')[0]) {
+                showToast('A data da anotação não pode ser no futuro.', 'error');
+                return;
+            }
+
              const newEntry: HistoryEntry = {
                 data: newHistoryDate,
                 responsavel: user.name,
@@ -277,6 +286,32 @@ const PatientDetails = ({ patient: initialPatient, allPatients, onBack, user, on
     };
     
     const handleSave = () => {
+        if (patient.altaAutorizada && !patient.motivoAlta) {
+            showToast('Erro de validação: O Motivo da Alta é obrigatório quando a Alta Autorizada é preenchida.', 'error');
+            setActiveSession('criticidadePrazos');
+            return;
+        }
+    
+        if (patient.altaPrev && patient.dataIH && patient.altaPrev < patient.dataIH) {
+            showToast('Erro de validação: A Alta Prevista não pode ser anterior à Data de Internação.', 'error');
+            setActiveSession('criticidadePrazos');
+            return;
+        }
+    
+        if (patient.altaReplan && patient.dataIH && patient.altaReplan < patient.dataIH) {
+            showToast('Erro de validação: A Alta Replanejada não pode ser anterior à Data de Internação.', 'error');
+            setActiveSession('criticidadePrazos');
+            return;
+        }
+        
+        const leitoDates = (patient.leitoHistory || []).map(r => r.date);
+        const uniqueLeitoDates = new Set(leitoDates);
+        if (leitoDates.length !== uniqueLeitoDates.size) {
+            showToast('Erro de validação: Existem datas duplicadas no histórico de leitos.', 'error');
+            setActiveSession('gestaoLeito');
+            return;
+        }
+
         onSavePatient(patient, user);
         showToast('Alterações salvas com sucesso!');
     };
@@ -486,7 +521,7 @@ const PatientDetails = ({ patient: initialPatient, allPatients, onBack, user, on
                 return (
                     <fieldset>
                         <legend>Gestão de Leito</legend>
-                        <GestaoDeLeito user={user} patient={patient} onPatientChange={setPatient} />
+                        <GestaoDeLeito user={user} patient={patient} onPatientChange={setPatient} showToast={showToast} />
                     </fieldset>
                 );
             case 'historico':

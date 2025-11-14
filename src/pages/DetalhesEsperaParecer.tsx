@@ -8,7 +8,7 @@ const DetalhesEsperaParecer = ({ patient, onBack, user, onUpdatePatient, showToa
     onBack: () => void,
     user: User,
     onUpdatePatient: (patient: Patient, user: User) => void,
-    showToast: (message: string) => void
+    showToast: (message: string, type?: 'success' | 'error') => void
 }) => {
     const [details, setDetails] = useState<EsperaParecerDetalhes>(patient.esperaParecerDetalhes || {});
 
@@ -18,6 +18,11 @@ const DetalhesEsperaParecer = ({ patient, onBack, user, onUpdatePatient, showToa
     };
 
     const handleSave = () => {
+        if (details.dataSolicitacao && details.dataResposta && details.dataSolicitacao > details.dataResposta) {
+            showToast('Erro de validação: A Data da Resposta não pode ser anterior à Data da Solicitação.', 'error');
+            return;
+        }
+
         const updatedPatient = {
             ...patient,
             esperaParecerDetalhes: details

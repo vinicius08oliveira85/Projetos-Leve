@@ -34,11 +34,13 @@ const criticidadeValueMap: { [key: string]: Patient['criticidade'] } = {
     '3': '72h',
 };
 
-const LeitoModal = ({ patient: initialPatient, user, onClose, onSave }: {
+// Fix: Added showToast prop to pass down to GestaoDeLeito
+const LeitoModal = ({ patient: initialPatient, user, onClose, onSave, showToast }: {
     patient: Patient;
     user: User;
     onClose: () => void;
     onSave: (updatedPatient: Patient) => void;
+    showToast: (message: string, type?: 'success'|'error') => void;
 }) => {
     const [patient, setPatient] = useState<Patient>(initialPatient);
 
@@ -54,7 +56,7 @@ const LeitoModal = ({ patient: initialPatient, user, onClose, onSave }: {
                     <button onClick={onClose} className="leito-modal-close-btn">&times;</button>
                 </div>
                 <div className="leito-modal-body" style={{ marginTop: '20px' }}>
-                    <GestaoDeLeito user={user} patient={patient} onPatientChange={setPatient} />
+                    <GestaoDeLeito user={user} patient={patient} onPatientChange={setPatient} showToast={showToast} />
                 </div>
                 <div className="details-actions" style={{ marginTop: '20px', justifyContent: 'flex-end', display: 'flex' }}>
                     <button onClick={onClose} className="modal-button cancel" style={{ marginRight: '10px' }}>Cancelar</button>
@@ -66,13 +68,14 @@ const LeitoModal = ({ patient: initialPatient, user, onClose, onSave }: {
 };
 
 
-const FotoDoDia = ({ onBack, onBackToCards, onSelectPatient, user, patients, onUpdatePatients, initialCriticidadeFilter = null }: { 
+const FotoDoDia = ({ onBack, onBackToCards, onSelectPatient, user, patients, onUpdatePatients, showToast, initialCriticidadeFilter = null }: { 
     onBack: () => void, 
     onBackToCards: () => void,
     onSelectPatient: (patient: Patient) => void, 
     user: User, 
     patients: Patient[], 
     onUpdatePatients: React.Dispatch<React.SetStateAction<Patient[]>>,
+    showToast: (message: string, type?: 'success'|'error') => void,
     initialCriticidadeFilter?: Patient['criticidade'][] | null 
 }) => {
     const [dateFilter, setDateFilter] = useState<string>('2025-08-24');
@@ -322,6 +325,7 @@ const FotoDoDia = ({ onBack, onBackToCards, onSelectPatient, user, patients, onU
                     user={user}
                     onClose={() => setEditingLeitoPatient(null)}
                     onSave={handleSaveLeito}
+                    showToast={showToast}
                 />
             )}
         </div>

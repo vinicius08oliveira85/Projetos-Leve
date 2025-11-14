@@ -8,7 +8,7 @@ const DetalhesEsperaExame = ({ patient, onBack, user, onUpdatePatient, showToast
     onBack: () => void,
     user: User,
     onUpdatePatient: (patient: Patient, user: User) => void,
-    showToast: (message: string) => void
+    showToast: (message: string, type?: 'success' | 'error') => void
 }) => {
     const [details, setDetails] = useState<EsperaExameDetalhes>(patient.esperaExameDetalhes || {});
 
@@ -18,6 +18,21 @@ const DetalhesEsperaExame = ({ patient, onBack, user, onUpdatePatient, showToast
     };
 
     const handleSave = () => {
+        const dates = [
+            { name: 'Data Início', value: details.dataInicio },
+            { name: 'Envio do Pedido', value: details.envioPedido },
+            { name: 'Laudo', value: details.laudo },
+            { name: 'Laudo Liberado', value: details.laudoLiberado },
+            { name: 'Data Fim', value: details.dataFim },
+        ].filter(d => d.value);
+    
+        for (let i = 0; i < dates.length - 1; i++) {
+            if (dates[i].value! > dates[i + 1].value!) {
+                showToast(`Erro de validação: A data '${dates[i + 1].name}' não pode ser anterior à data '${dates[i].name}'.`, 'error');
+                return;
+            }
+        }
+
         const updatedPatient = {
             ...patient,
             esperaExameDetalhes: details
