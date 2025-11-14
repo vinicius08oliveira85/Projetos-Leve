@@ -681,6 +681,27 @@ body {
     color: var(--light-text-color);
     font-weight: 500;
 }
+
+.total-summary-banner {
+    background-color: var(--white-color);
+    padding: 16px 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    border: 1px solid var(--border-color);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-color);
+}
+.total-summary-banner strong {
+    color: var(--primary-color);
+}
+.total-summary-banner span {
+    color: var(--light-text-color);
+    font-weight: 500;
+    margin-left: 8px;
+}
+
 .table-container {
     overflow-x: auto;
     background: var(--white-color);

@@ -612,6 +612,9 @@ const MapaDeEspera = ({ onBack, onSelectPatient, user, patients, onUpdatePatient
         };
     }, []);
 
+    const totalInternados = useMemo(() => {
+        return patients.filter(p => !p.altaFim).length;
+    }, [patients]);
 
     const esperaCounts = useMemo(() => {
         return patients.reduce((acc, p) => {
@@ -906,6 +909,11 @@ const MapaDeEspera = ({ onBack, onSelectPatient, user, patients, onUpdatePatient
                 subtitle={subtitle}
                 onBack={onBack}
             />
+
+            <div className="total-summary-banner">
+                Total de pacientes internados: <strong>{totalInternados}</strong> - <span>14/11/2025</span>
+            </div>
+
             <div className="content-box">
                 <h2 className="section-title-box">Pacientes em espera</h2>
                 <div className="espera-cards-container">
