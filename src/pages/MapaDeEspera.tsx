@@ -511,9 +511,37 @@ const ResumoClinicoModal = ({ patient: initialPatient, onClose, user, onUpdatePa
                     <button onClick={onClose} className="leito-modal-close-btn">&times;</button>
                 </div>
                 <div className="leito-modal-body" style={{ marginTop: '20px' }}>
+                     <fieldset style={{ marginBottom: '24px' }}>
+                        <legend>Histórico de Anotações</legend>
+                        {patient.historico && patient.historico.length > 0 ? (
+                            <div className="table-container" style={{ padding: 0, maxHeight: '200px', overflowY: 'auto' }}>
+                                <table className="history-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Data</th>
+                                            <th>Responsável</th>
+                                            <th>Diário de Internação</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {[...patient.historico].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()).map((item, index) => (
+                                            <tr key={index}>
+                                                <td>{formatDateDdMmYy(item.data)}</td>
+                                                <td>{item.responsavel}</td>
+                                                <td>{item.diario}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <p>Nenhuma anotação registrada.</p>
+                        )}
+                    </fieldset>
+                    
                     {user.role === 'admin' ? (
                         <fieldset>
-                            <legend>Resumo clínico</legend>
+                            <legend>Adicionar Nova Anotação</legend>
                             <form className="add-history-form" onSubmit={handleHistorySubmit}>
                                 <div className="history-form-grid">
                                     <div className="form-group">
@@ -550,9 +578,7 @@ const ResumoClinicoModal = ({ patient: initialPatient, onClose, user, onUpdatePa
                                 <button type="submit" className="add-history-btn">Adicionar Anotação</button>
                             </form>
                         </fieldset>
-                    ) : (
-                        <p>Você não tem permissão para adicionar anotações.</p>
-                    )}
+                    ) : null}
                 </div>
                  <div className="modal-actions" style={{ paddingTop: '20px' }}>
                      <button onClick={onClose} className="modal-button cancel">Fechar</button>
