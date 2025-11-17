@@ -1,7 +1,18 @@
 import React, { useState, useMemo } from 'react';
-import { Patient, User, EsperaExameDetalhes } from '../types/index.ts';
-import { calculateDaysBetween } from '../utils/helpers.ts';
+import { Patient, User, EsperaExameDetalhes, TimelineHistoryEntry } from '../types/index.ts';
+import { calculateDaysBetween, formatDateDdMmYy } from '../utils/helpers.ts';
 import AppHeader from '../components/AppHeader.tsx';
+import TimelineHistory from '../components/TimelineHistory.tsx';
+
+const fieldLabels: { [key in keyof (EsperaExameDetalhes & { aguardandoExame: string })]: string } = {
+    aguardandoExame: 'Aguardando Exame',
+    dataInicio: 'Data Início',
+    envioPedido: 'Envio do Pedido',
+    esperaAgendamento: 'Espera Agendamento',
+    laudo: 'Laudo',
+    laudoLiberado: 'Laudo Liberado',
+    dataFim: 'Data Fim',
+};
 
 const DetalhesEsperaExame = ({ patient, onBack, user, onUpdatePatient, showToast }: {
     patient: Patient,
@@ -10,6 +21,10 @@ const DetalhesEsperaExame = ({ patient, onBack, user, onUpdatePatient, showToast
     onUpdatePatient: (patient: Patient, user: User) => void,
     showToast: (message: string, type?: 'success' | 'error') => void
 }) => {
+    // Keep track of the initial state to compare on save
+    const [initialDetails] = useState<EsperaExameDetalhes>(patient.esperaExameDetalhes || {});
+    const [initialAguardandoExame] = useState<string>(patient.aguardandoExame || '');
+
     const [details, setDetails] = useState<EsperaExameDetalhes>(patient.esperaExameDetalhes || {});
     const [aguardandoExame, setAguardandoExame] = useState<string>(patient.aguardandoExame || '');
 
@@ -34,10 +49,52 @@ const DetalhesEsperaExame = ({ patient, onBack, user, onUpdatePatient, showToast
             }
         }
 
+        const newHistoryEntries: TimelineHistoryEntry[] = [];
+        const now = new Date().toISOString();
+
+        // Compare aguardandoExame
+        if (initialAguardandoExame !== aguardandoExame) {
+            newHistoryEntries.push({
+                data: now,
+                responsavel: user.name,
+                alteracao: `O campo '${fieldLabels.aguardandoExame}' foi alterado de '${initialAguardandoExame || 'vazio'}' para '${aguardandoExame || 'vazio'}'.`
+            });
+        }
+        
+        // FIX: Replaced forEach with a for...of loop to allow for correct type narrowing.
+        // Compare details object
+        for (const key of Object.keys(fieldLabels) as Array<keyof typeof fieldLabels>) {
+            if (key === 'aguardandoExame') {
+                continue;
+            }
+            
+            const initialValue = initialDetails[key];
+            const currentValue = details[key];
+
+            if (initialValue !== currentValue) {
+                 const from = key.startsWith('data') ? (formatDateDdMmYy(initialValue) === 'N/A' ? 'vazio' : formatDateDdMmYy(initialValue)) : (initialValue || 'vazio');
+                 const to = key.startsWith('data') ? (formatDateDdMmYy(currentValue) === 'N/A' ? 'vazio' : formatDateDdMmYy(currentValue)) : (currentValue || 'vazio');
+
+                 if (from !== to) {
+                    newHistoryEntries.push({
+                        data: now,
+                        responsavel: user.name,
+                        alteracao: `O campo '${fieldLabels[key]}' foi alterado de '${from}' para '${to}'.`
+                    });
+                 }
+            }
+        }
+
+        if (newHistoryEntries.length === 0) {
+            showToast('Nenhuma alteração foi feita.');
+            return;
+        }
+
         const updatedPatient = {
             ...patient,
             esperaExameDetalhes: details,
             aguardandoExame: aguardandoExame,
+            historicoEsperaExame: [...(patient.historicoEsperaExame || []), ...newHistoryEntries],
         };
         onUpdatePatient(updatedPatient, user);
         showToast('Alterações salvas com sucesso!');
@@ -100,6 +157,12 @@ const DetalhesEsperaExame = ({ patient, onBack, user, onUpdatePatient, showToast
                         </div>
                     </div>
                 </fieldset>
+                
+                <fieldset style={{ marginTop: '24px' }}>
+                    <legend>Histórico de Alterações da Espera</legend>
+                    <TimelineHistory history={patient.historicoEsperaExame || []} />
+                </fieldset>
+                
                 {user.role === 'admin' && (
                     <div className="details-actions">
                         <button onClick={handleSave} className="save-details-btn">Salvar Alterações</button>

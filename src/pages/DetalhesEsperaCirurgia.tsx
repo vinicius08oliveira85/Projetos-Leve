@@ -3,7 +3,7 @@ import { Patient, User, EsperaCirurgiaDetalhes } from '../types/index.ts';
 import { calculateDaysBetween, formatDateDdMmYy } from '../utils/helpers.ts';
 import AppHeader from '../components/AppHeader.tsx';
 
-// FIX: Define the specific types for surgery to enforce type safety.
+// Define the specific types for surgery to enforce type safety.
 type TipoCirurgia = NonNullable<Patient['tipoCirurgia']>;
 const tipoCirurgiaOptions: TipoCirurgia[] = [
     'Ortopédica', 'Cardíaca', 'Endovascular', 'Abdominal', 'Vascular', 'Transplante', 'Obstetrícia', 'Outra'
@@ -17,7 +17,7 @@ const DetalhesEsperaCirurgia = ({ patient, onBack, user, onUpdatePatient, showTo
     showToast: (message: string, type?: 'success' | 'error') => void
 }) => {
     const [details, setDetails] = useState<EsperaCirurgiaDetalhes>(patient.esperaCirurgiaDetalhes || {});
-    // FIX: Use the specific surgery type for state to ensure type safety.
+    // Use the specific surgery type for state to ensure type safety.
     const [tipoCirurgia, setTipoCirurgia] = useState<TipoCirurgia | ''>(patient.tipoCirurgia || '');
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -46,7 +46,7 @@ const DetalhesEsperaCirurgia = ({ patient, onBack, user, onUpdatePatient, showTo
         const updatedPatient: Patient = {
             ...patient,
             esperaCirurgiaDetalhes: details,
-            // FIX: Ensure tipoCirurgia is either a valid type or undefined to match the Patient type.
+            // Ensure tipoCirurgia is either a valid type or undefined to match the Patient type.
             tipoCirurgia: tipoCirurgia === '' ? undefined : tipoCirurgia,
         };
         onUpdatePatient(updatedPatient, user);
@@ -89,7 +89,6 @@ const DetalhesEsperaCirurgia = ({ patient, onBack, user, onUpdatePatient, showTo
                     <div className="espera-cirurgia-grid">
                         <div className="form-group form-group-highlight">
                             <label>Aguardando Cirurgia</label>
-                            {/* FIX: Changed input to a select dropdown to match the allowed types for tipoCirurgia. */}
                             <select
                                 name="tipoCirurgia"
                                 value={tipoCirurgia}

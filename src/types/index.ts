@@ -26,6 +26,12 @@ export type HistoryEntry = {
   diario: string;
 };
 
+export type TimelineHistoryEntry = {
+  data: string;
+  responsavel: string;
+  alteracao: string;
+};
+
 export type LeitoType = 'CTI' | 'CTI PED' | 'CTI NEO' | 'USI' | 'USI PED' | 'UI' | 'UI PSQ' | 'EL';
 
 export type LeitoRecord = {
@@ -122,6 +128,7 @@ export type Patient = {
   aguardandoExame?: string;
   desdeExame?: string;
   esperaExameDetalhes?: EsperaExameDetalhes;
+  historicoEsperaExame?: TimelineHistoryEntry[];
   aguardandoParecer?: string;
   desdeParecer?: string;
   esperaParecerDetalhes?: EsperaParecerDetalhes;
