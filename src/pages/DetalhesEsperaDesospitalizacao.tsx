@@ -17,9 +17,19 @@ const DetalhesEsperaDesospitalizacao = ({ patient, onBack, user, onUpdatePatient
     };
 
     const handleSave = () => {
+        const summaryItems: string[] = [];
+        if (details.aguardaAntibioticoTerapia === 'Sim') summaryItems.push('Antibioticoterapia');
+        if (details.aguardaCurativoDomiciliar === 'Sim') summaryItems.push('Curativo Domiciliar');
+        if (details.aguardaOxigenioTerapia === 'Sim') summaryItems.push('Oxigenoterapia');
+        if (details.aguardaHomeCare === 'Sim') summaryItems.push('Home Care');
+        if (details.aguardaPedido === 'Sim') summaryItems.push('Aguarda Pedido');
+
+        const aguardandoDesospitalizacao = summaryItems.join(', ');
+
         const updatedPatient = {
             ...patient,
-            esperaDesospitalizacaoDetalhes: details
+            esperaDesospitalizacaoDetalhes: details,
+            aguardandoDesospitalizacao: aguardandoDesospitalizacao,
         };
         onUpdatePatient(updatedPatient, user);
         showToast('Alterações salvas com sucesso!');

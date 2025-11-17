@@ -355,7 +355,20 @@ const DetalhesEsperaDesospitalizacaoModal = ({ patient, onClose, user, onUpdateP
         setDetails(prev => ({ ...prev, [name]: value as 'Sim' | 'Não' }));
     };
     const handleSave = () => {
-        const updatedPatient = { ...patient, esperaDesospitalizacaoDetalhes: details };
+        const summaryItems: string[] = [];
+        if (details.aguardaAntibioticoTerapia === 'Sim') summaryItems.push('Antibioticoterapia');
+        if (details.aguardaCurativoDomiciliar === 'Sim') summaryItems.push('Curativo Domiciliar');
+        if (details.aguardaOxigenioTerapia === 'Sim') summaryItems.push('Oxigenoterapia');
+        if (details.aguardaHomeCare === 'Sim') summaryItems.push('Home Care');
+        if (details.aguardaPedido === 'Sim') summaryItems.push('Aguarda Pedido');
+        
+        const aguardandoDesospitalizacao = summaryItems.join(', ');
+
+        const updatedPatient = { 
+            ...patient, 
+            esperaDesospitalizacaoDetalhes: details,
+            aguardandoDesospitalizacao: aguardandoDesospitalizacao
+        };
         onUpdatePatient(updatedPatient, user);
         showToast('Alterações salvas com sucesso!');
         onClose();
@@ -927,53 +940,61 @@ const MapaDeEspera = ({ onBack, onSelectPatient, user, patients, onUpdatePatient
             }
 
             const diasDeEspera = calculateDaysWaiting(desde);
+            const latestLeitoRecord = [...(p.leitoHistory || [])]
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+            const leitoDoDia = latestLeitoRecord ? latestLeitoRecord.leitoDoDia : p.leitoAdmissao;
 
             return (
                 <tr key={p.id}>
-                    <td>{p.hospitalDestino}</td>
-                    <td>{p.nome}</td>
-                    <td>{formatDateDdMmYy(p.dataIH)}</td>
-                    <td>{formatDateDdMmYy(p.altaPrev)}</td>
-                    <td>{aguardando || 'N/A'}</td>
-                    <td>{formatDateDdMmYy(desde)}</td>
-                    <td className="days-cell">{diasDeEspera !== 'N/A' ? `${diasDeEspera} dias` : 'N/A'}</td>
-                    <td>{p.leitoAuditado || 'N/A'}</td>
                     <td>
                         <button className="icon-button" onClick={detailsHandler} aria-label={`Detalhes da Espera de ${p.nome}`}>
                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </button>
+                    </td>
+                    <td>{p.guia}</td>
+                    <td>{p.nome}</td>
+                    <td>{formatDateDdMmYy(p.dataIH)}</td>
+                    <td>{p.hospitalDestino}</td>
+                    <td>{aguardando || 'N/A'}</td>
+                    <td>{formatDateDdMmYy(desde)}</td>
+                    <td className="days-cell">{diasDeEspera !== 'N/A' ? `${diasDeEspera} dias` : 'N/A'}</td>
+                    <td>{leitoDoDia}</td>
+                    <td>
+                        <button className="icon-button" onClick={() => setResumoClinicoPatient(p)} aria-label={`Resumo clínico de ${p.nome}`} title="Ver/Adicionar Resumo clínico">
+                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                         </button>
                     </td>
                 </tr>
             );
         };
         
-        const headerLabels: Record<keyof Esperas, string> = {
-            cirurgia: 'AGUARDANDO CIRURGIA',
-            exame: 'AGUARDANDO EXAME',
-            parecer: 'AGUARDANDO PARECER',
-            desospitalizacao: 'AGUARDANDO DESOSPITALIZAÇÃO'
+        const detalhesLabels: Record<keyof Esperas, string> = {
+            cirurgia: 'Detalhes da Cirurgia',
+            exame: 'Detalhes do Exame',
+            parecer: 'Detalhes do Parecer',
+            desospitalizacao: 'Detalhes da Desospitalização'
         };
-
-        const desdeLabels: Record<keyof Esperas, string> = {
-            cirurgia: 'DESDE CIRURGIA',
-            exame: 'DESDE EXAME',
-            parecer: 'DESDE PARECER',
-            desospitalizacao: 'DESDE DESOSPITALIZAÇÃO'
+        const aguardandoLabels: Record<keyof Esperas, string> = {
+            cirurgia: 'Aguardando Cirurgia',
+            exame: 'Aguardando Exame',
+            parecer: 'Aguardando Parecer',
+            desospitalizacao: 'Aguardando Desospitalização'
         };
         
         return (
             <table className="patient-table">
                 <thead>
                     <tr>
-                        <th>HOSPITAL IH</th>
-                        <th>PACIENTE</th>
-                        <th>DATA IH</th>
-                        <th>PREVISÃO DE ALTA</th>
-                        <th>{headerLabels[activeFilter]}</th>
-                        <th>{desdeLabels[activeFilter]}</th>
-                        <th>DIAS DE ESPERA</th>
-                        <th>LEITO AUDITADO</th>
-                        <th>DETALHES</th>
+                        <th>{detalhesLabels[activeFilter]}</th>
+                        <th>Guia</th>
+                        <th>Nome do Paciente</th>
+                        <th>Data IH</th>
+                        <th>Hospital Destino</th>
+                        <th>{aguardandoLabels[activeFilter]}</th>
+                        <th>Desde</th>
+                        <th>Dias de Espera</th>
+                        <th>Leito do dia</th>
+                        <th>Resumo Clínico</th>
                     </tr>
                 </thead>
                 <tbody>

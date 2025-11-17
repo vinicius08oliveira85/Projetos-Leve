@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Patient, User, EsperaCirurgiaDetalhes, LeitoType, HistoryEntry } from '../types/index.ts';
+import { Patient, User, EsperaCirurgiaDetalhes, HistoryEntry } from '../types/index.ts';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { formatDateDdMmYy, calculateDaysWaiting, calculateDaysBetween, createBlob } from '../utils/helpers.ts';
 import AppHeader from '../components/AppHeader.tsx';
@@ -418,40 +418,40 @@ const PacientesAguardandoCirurgia = ({
 
     // Temporary filters
     const [hospitalFilter, setHospitalFilter] = useState('Todos');
-    const [leitoFilter, setLeitoFilter] = useState('Todos');
+    const [criticidadeFilter, setCriticidadeFilter] = useState('Todos');
 
     // Applied filters
     const [appliedFilters, setAppliedFilters] = useState({
         hospital: 'Todos',
-        leito: 'Todos',
+        criticidade: 'Todos',
     });
     
     const surgeryPatients = useMemo(() => patients.filter(p => p.esperas.cirurgia), [patients]);
     const uniqueHospitals = useMemo(() => ['Todos', ...new Set(surgeryPatients.map(p => p.hospitalDestino))], [surgeryPatients]);
-    const leitoOptions: (LeitoType | 'Todos')[] = ['Todos', 'CTI', 'CTI PED', 'CTI NEO', 'USI', 'USI PED', 'UI', 'UI PSQ', 'EL'];
+    const criticidadeOptions: (Patient['criticidade'] | 'Todos')[] = ['Todos', 'Revisão Padrão', 'Diário 24h', '48h', '72h'];
 
 
     const filteredPatients = useMemo(() => {
         return surgeryPatients.filter(p => {
             const hospitalMatch = appliedFilters.hospital === 'Todos' || p.hospitalDestino === appliedFilters.hospital;
-            const leitoMatch = appliedFilters.leito === 'Todos' || p.leitoHoje === appliedFilters.leito;
-            return hospitalMatch && leitoMatch;
+            const criticidadeMatch = appliedFilters.criticidade === 'Todos' || p.criticidade === appliedFilters.criticidade;
+            return hospitalMatch && criticidadeMatch;
         });
     }, [surgeryPatients, appliedFilters]);
 
     const handleApplyFilters = () => {
         setAppliedFilters({
             hospital: hospitalFilter,
-            leito: leitoFilter,
+            criticidade: criticidadeFilter,
         });
     };
 
     const handleClearFilters = () => {
         setHospitalFilter('Todos');
-        setLeitoFilter('Todos');
+        setCriticidadeFilter('Todos');
         setAppliedFilters({
             hospital: 'Todos',
-            leito: 'Todos',
+            criticidade: 'Todos',
         });
     };
 
@@ -472,9 +472,9 @@ const PacientesAguardandoCirurgia = ({
                             </select>
                         </div>
                         <div className="form-group" style={{marginBottom: 0}}>
-                            <label>Leito do dia:</label>
-                            <select value={leitoFilter} onChange={(e) => setLeitoFilter(e.target.value)}>
-                                {leitoOptions.map(l => <option key={l} value={l}>{l}</option>)}
+                            <label>Criticidade:</label>
+                            <select value={criticidadeFilter} onChange={(e) => setCriticidadeFilter(e.target.value)}>
+                                {criticidadeOptions.map(c => <option key={c} value={c}>{c}</option>)}
                             </select>
                         </div>
                          <div className="filter-actions" style={{display: 'flex', gap: '10px'}}>
@@ -513,7 +513,7 @@ const PacientesAguardandoCirurgia = ({
                             return (
                                 <tr key={p.id}>
                                      <td>
-                                        <button className="icon-button" onClick={() => setSelectedPatient(p)} aria-label={`Detalhes da Cirurgia de ${p.nome}`}>
+                                        <button className="icon-button" onClick={() => setSelectedPatient(p)} aria-label={`Detalhes da Cirurgia de ${p.nome}`} title="Ver Detalhes da Cirurgia">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                                         </button>
                                     </td>

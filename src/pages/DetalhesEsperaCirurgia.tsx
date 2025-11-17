@@ -3,6 +3,12 @@ import { Patient, User, EsperaCirurgiaDetalhes } from '../types/index.ts';
 import { calculateDaysBetween, formatDateDdMmYy } from '../utils/helpers.ts';
 import AppHeader from '../components/AppHeader.tsx';
 
+// FIX: Define the specific types for surgery to enforce type safety.
+type TipoCirurgia = NonNullable<Patient['tipoCirurgia']>;
+const tipoCirurgiaOptions: TipoCirurgia[] = [
+    'Ortopédica', 'Cardíaca', 'Endovascular', 'Abdominal', 'Vascular', 'Transplante', 'Obstetrícia', 'Outra'
+];
+
 const DetalhesEsperaCirurgia = ({ patient, onBack, user, onUpdatePatient, showToast }: {
     patient: Patient,
     onBack: () => void,
@@ -11,6 +17,8 @@ const DetalhesEsperaCirurgia = ({ patient, onBack, user, onUpdatePatient, showTo
     showToast: (message: string, type?: 'success' | 'error') => void
 }) => {
     const [details, setDetails] = useState<EsperaCirurgiaDetalhes>(patient.esperaCirurgiaDetalhes || {});
+    // FIX: Use the specific surgery type for state to ensure type safety.
+    const [tipoCirurgia, setTipoCirurgia] = useState<TipoCirurgia | ''>(patient.tipoCirurgia || '');
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -35,9 +43,11 @@ const DetalhesEsperaCirurgia = ({ patient, onBack, user, onUpdatePatient, showTo
             }
         }
 
-        const updatedPatient = {
+        const updatedPatient: Patient = {
             ...patient,
-            esperaCirurgiaDetalhes: details
+            esperaCirurgiaDetalhes: details,
+            // FIX: Ensure tipoCirurgia is either a valid type or undefined to match the Patient type.
+            tipoCirurgia: tipoCirurgia === '' ? undefined : tipoCirurgia,
         };
         onUpdatePatient(updatedPatient, user);
         showToast('Alterações salvas com sucesso!');
@@ -77,6 +87,21 @@ const DetalhesEsperaCirurgia = ({ patient, onBack, user, onUpdatePatient, showTo
                 <fieldset>
                     <legend>Espera Cirurgia</legend>
                     <div className="espera-cirurgia-grid">
+                        <div className="form-group form-group-highlight">
+                            <label>Aguardando Cirurgia</label>
+                            {/* FIX: Changed input to a select dropdown to match the allowed types for tipoCirurgia. */}
+                            <select
+                                name="tipoCirurgia"
+                                value={tipoCirurgia}
+                                onChange={(e) => setTipoCirurgia(e.target.value as TipoCirurgia | '')}
+                                disabled={user.role !== 'admin'}
+                            >
+                                <option value="" disabled>Selecione o tipo de cirurgia</option>
+                                {tipoCirurgiaOptions.map(option => (
+                                    <option key={option} value={option}>{option}</option>
+                                ))}
+                            </select>
+                        </div>
                         <div className="form-group form-group-highlight">
                             <label>Data Início Espera Cirurgia</label>
                             <input type="date" name="dataInicio" value={details.dataInicio || ''} onChange={handleInputChange} disabled={user.role !== 'admin'} />

@@ -214,7 +214,7 @@ const App = () => {
                            onViewDetails={handleViewExamWaitDetails}
                            user={user}
                            patients={patients}
-                           onSavePatients={handleUpdateMultiplePatients}
+                           onUpdatePatient={handleUpdatePatient}
                            showToast={showToast}
                        />;
             case 'Pacientes Aguardando Parecer':
@@ -232,7 +232,7 @@ const App = () => {
                            onViewDetails={handleViewDesospitalizacaoWaitDetails}
                            user={user}
                            patients={patients}
-                           onSavePatients={handleUpdateMultiplePatients}
+                           onUpdatePatient={handleUpdatePatient}
                            showToast={showToast}
                        />;
             case 'Detalhes da Espera de Cirurgia':

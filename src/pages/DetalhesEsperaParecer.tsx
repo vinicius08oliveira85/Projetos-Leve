@@ -25,7 +25,8 @@ const DetalhesEsperaParecer = ({ patient, onBack, user, onUpdatePatient, showToa
 
         const updatedPatient = {
             ...patient,
-            esperaParecerDetalhes: details
+            esperaParecerDetalhes: details,
+            aguardandoParecer: details.especialidade
         };
         onUpdatePatient(updatedPatient, user);
         showToast('Alterações salvas com sucesso!');

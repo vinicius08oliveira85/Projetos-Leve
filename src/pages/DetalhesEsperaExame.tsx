@@ -11,6 +11,7 @@ const DetalhesEsperaExame = ({ patient, onBack, user, onUpdatePatient, showToast
     showToast: (message: string, type?: 'success' | 'error') => void
 }) => {
     const [details, setDetails] = useState<EsperaExameDetalhes>(patient.esperaExameDetalhes || {});
+    const [aguardandoExame, setAguardandoExame] = useState<string>(patient.aguardandoExame || '');
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -35,7 +36,8 @@ const DetalhesEsperaExame = ({ patient, onBack, user, onUpdatePatient, showToast
 
         const updatedPatient = {
             ...patient,
-            esperaExameDetalhes: details
+            esperaExameDetalhes: details,
+            aguardandoExame: aguardandoExame,
         };
         onUpdatePatient(updatedPatient, user);
         showToast('Alterações salvas com sucesso!');
@@ -54,6 +56,16 @@ const DetalhesEsperaExame = ({ patient, onBack, user, onUpdatePatient, showToast
                 <fieldset>
                     <legend>Espera Exame</legend>
                     <div className="espera-exame-grid">
+                        <div className="form-group form-group-highlight">
+                            <label>Aguardando Exame</label>
+                            <input
+                                type="text"
+                                name="aguardandoExame"
+                                value={aguardandoExame}
+                                onChange={(e) => setAguardandoExame(e.target.value)}
+                                disabled={user.role !== 'admin'}
+                            />
+                        </div>
                         <div className="form-group form-group-highlight">
                             <label>Data Início</label>
                             <input type="date" name="dataInicio" value={details.dataInicio || ''} onChange={handleInputChange} disabled={user.role !== 'admin'} />
